@@ -1,0 +1,14 @@
+[
+  {
+    "user": {
+      "name": "Oshi Paulinus Offorbuike\r\n",
+      "address": "93b Orifite Street\r\n",
+      "email": "eminent2547@gmail.com\r\n",
+      "user_type": "Guest",
+      "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$NKSuFEfGZ+I5dPuQfPY6ng$ZkGPIlmdjO3VhPtUAmZ8wrVriUtouVAlhUayyq6BZ4w",
+      "status": "LoggedOut"
+    },
+    "account_number": "8143122946",
+    "balance": 0.0
+  }
+]
