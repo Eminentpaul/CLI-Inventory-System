@@ -1,14 +1,14 @@
 [
   {
+    "name": "Dell Latitude 5511\r\n",
+    "price": 450000.0,
+    "stock": 15,
+    "category": "Computing"
+  },
+  {
     "name": "Rice\r\n",
     "price": 200.0,
     "stock": 30,
     "category": "Food"
-  },
-  {
-    "name": "HP G8\r\n",
-    "price": 2500000.0,
-    "stock": 20,
-    "category": "Computing"
   }
 ]

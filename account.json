@@ -16,7 +16,7 @@
       "name": "Oshi Nichodemus\r\n",
       "address": "Emene\r\n",
       "email": "email@email.com\r\n",
-      "user_type": "Admin",
+      "user_type": "Guest",
       "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$f2tA2VfP0QoBVbrvPTb1Aw$kUw72rvxQLTstIDnMetUrcJBKObX/dcGumUf23SCWV4",
       "status": "LoggedOut"
     },

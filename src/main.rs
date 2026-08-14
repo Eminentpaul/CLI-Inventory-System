@@ -136,7 +136,7 @@ fn main() {
     let mut logged_in_account: Option<Account> = None;
     loop {
 
-        println!("Options: \n1. Add Product\n2. View All Products\n3. View Single Product\n4. Update Product\n5. Delete Product\n6. Save Inventory\n7. View Cart\n8. View Orders\n9. Create Account\n10. Change User Type\n11. Login\n12. Exit");
+        println!("Options: \n1. Add Product\n2. View All Products\n3. View Single Product\n5. View Cart\n6. View Orders\n7. Create Account\n8. Change User Type\n9. Login\n10. Exit");
 
         let input = user_input("Please Select an Option:");
 
@@ -159,7 +159,7 @@ fn main() {
                     }
                 };
 
-                let product_name = user_input("Enter Product Naem:");
+                let product_name = user_input("Enter Product Name:");
                 let price = user_input("Enter Price:");
 
                 let price = match check_price(&price) {
@@ -226,7 +226,7 @@ fn main() {
                 product_output(&product, serial-1);
 
 
-                println!("Product Options:\n1. Restock Product\n2. Add to Cart\n3. Delete Product");
+                println!("Product Options:\n1. Restock Product\n2. Update Product\n3. Add to Cart\n4. Delete Product");
                 let input = user_input("Select an Option:");
 
                 match input.trim() {
@@ -258,14 +258,47 @@ fn main() {
                                 }
                             };
 
+                        
+                        if active_account.user.user_type == UserType::Admin {
+                            update_product(serial, product_path);
+                        }else {
+                            println!("Only Admin has the Permission to Perform the action")
+                        }
+                    },
+
+                    "3" => {
+                        let active_account = match verify_login(logged_in_account.clone()) {
+                                Ok(account) => account,
+                                Err(err) => {
+                                    println!("{}", err);
+                                    return;
+                                }
+                            };
+
                         add_to_cart(&active_account, &product, cart_path);
+                    },
+
+                    "4" => {
+                        let active_account = match verify_login(logged_in_account.clone()) {
+                                Ok(account) => account,
+                                Err(err) => {
+                                    println!("{}", err);
+                                    return;
+                                }
+                            };
+
+                        if active_account.user.user_type == UserType::Admin {
+                            delete_product(product_path, serial);
+                        }else {
+                            println!("Only Admin has the Permission to Perform the action")
+                        }
                     }
 
-                    _ => println!("Invalid Input")
+                    _ => println!("Invalid Input for Product Actions")
                 }
             },
 
-            "9" => {
+            "7" => {
                 let full_name = user_input("Enter Full Name:");
                 let email = user_input("Enter Your Email:");
 
@@ -301,7 +334,7 @@ fn main() {
                 
             },
 
-            "10" => {
+            "8" => {
                 match change_user_type(&logged_in_account, acct_path) {
                     Ok(done) => {
                         println!("{}", done)
@@ -313,7 +346,7 @@ fn main() {
                 };
             },
 
-            "11" => {
+            "9" => {
                 println!("Account Login");
                 let phone_no = user_input("Enter Your Phone Number:");
                 let phone_no = match check_phone_number(&phone_no) {
@@ -457,6 +490,76 @@ fn view_product(path:&str, serial:usize) -> Result<Product, String> {
     // product_output(&db[serial-1], serial-1);
     
 }
+
+fn update_product(index:usize, path:&str) {
+    let mut db: Vec<Product> = match load_database(path) {
+        Ok(product) => product,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+
+    match db.get_mut(index-1) {
+        Some(product) => {
+            println!("Add Product:");
+                
+                let product_name = user_input("Enter Product Name:");
+                let price = user_input("Enter Price:");
+
+                let price = match check_price(&price) {
+                    Ok(num) => num,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+                let stock = user_input("Enter the number of Stocks:");
+                let stock = match check_stock(&stock) {
+                    Ok(num) => num,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+                println!("Select category:\n1. Food\n2. Electronics\n3. Fashion\n4. Grocery\n5. Computing");
+
+                let cate = user_input("Select Category");
+                let category = match get_category(&cate) {
+                    Some(cat) => cat,
+                    None => {
+                        println!("Invalid Category");
+                        return;
+                    }
+                };
+
+                product.name = product_name.to_string();
+                product.price = price;
+                product.stock = stock;
+                product.category = category
+        }, 
+        None => println!("Product not Found")
+    }
+
+    let saved = match save_file(path, &db) {
+        Ok(file) => file,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    if saved {
+        println!("Product Updated Successfully!")
+    }else {
+        println!("Product not Updated Successfully!")
+    }
+
+}
+
 
 fn view_all_product(path:&str){
     let db:Vec<Product> = match load_database(path) {
@@ -615,7 +718,38 @@ fn change_user_type(account:&Option<Account>, path:&str) -> Result<String, Strin
 }
 
 
+fn delete_product(path:&str, serial:usize) {
+    let mut prod_db:Vec<Product> = match load_database(path) {
+        Ok(product) => product,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
 
+    match prod_db.get_mut(serial-1) {
+        Some(prod) => {
+            prod_db.remove(serial-1);
+        },
+        None => println!("Product not Found!")
+    }
+
+
+    let saved = match  save_file(path, &prod_db) {
+        Ok(done) => done,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    if saved{
+        println!("Product deleted Successfully")
+    }else {
+        println!("Product not deleted Successfully")
+    }
+
+}
 
 
 
