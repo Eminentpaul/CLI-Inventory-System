@@ -89,19 +89,19 @@ struct Product {
     name: String,
     price: f64,
     stock: i32,
-    category: Option<Category>
+    category: Category
 }
 
 
 
 
 impl Product {
-    fn new(name:&str, price: f64, stock:i32, categore:Category) -> Self {
+    fn new(name:&str, price: f64, stock:i32, category: Category) -> Self {
         Self { 
             name: String::from(name), 
             price, 
             stock, 
-            category: None
+            category
          }
     }
 }
@@ -141,16 +141,62 @@ fn main() {
                 let product_name = user_input("Enter Product Naem:");
                 let price = user_input("Enter Price:");
 
-                let price:f64 = match price.trim().parse() {
+                let price = match check_price(&price) {
                     Ok(num) => num,
-                    Err(_) => {
-                        println!("Price cannot be zero (0)");
+                    Err(err) => {
+                        println!("{}", err);
                         return;
                     }
                 };
 
+                let stock = user_input("Enter the number of Stocks:");
+                let stock = match check_stock(&stock) {
+                    Ok(num) => num,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+                println!("Select category:\n1. Food\n2. Electronics\n3. Fashion\n4. Grocery\n5. Computing");
+
+                let cate = user_input("Select Category");
+                let category = match get_category(&cate) {
+                    Some(cat) => cat,
+                    None => {
+                        println!("Invalid Category");
+                        return;
+                    }
+                };
+
+                add_product(price, stock, &product_name, category, product_path);
+
+                
+
 
             },
+
+            "2" => {
+                println!("\nAll Available Product:");
+                view_all_product(product_path);
+            },
+
+            "3" => {
+                println!("\nAll Available Product:");
+                view_all_product(product_path);
+
+                let product_input = user_input("Select a Product:");
+                let serial:usize = match product_input.trim().parse() {
+                    Ok(num) => num,
+                    Err(_) => {
+                        println!("Invalid Input");
+                        return;
+                    }
+                };
+
+                view_product(&product_input, serial);
+            },
+
             "11" => {
                 let full_name = user_input("Enter Full Name:");
                 let email = user_input("Enter Your Email:");
@@ -278,6 +324,69 @@ fn login(phone_no: &str, password: &str, path:&str) -> Result<Account, String>{
 }
 
 
+fn add_product(price:f64, stock:i32, name:&str, category: Category, path:&str) {
+    let mut db: Vec<Product> = match load_database(path) {
+        Ok(product) => product,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+
+    let new_product = Product::new(&name.to_string(), price, stock, category);
+
+    db.push(new_product);
+
+    let saved = match save_file(path, &db) {
+        Ok(file) => file,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    if saved {
+        println!("Product Added Successfully!")
+    }else {
+        println!("Product not Added Successfully!")
+    }
+
+    
+}   
+
+
+fn view_product(path:&str, serial:usize) {
+    let db:Vec<Product> = match load_database(path) {
+        Ok(product) => product,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    for (no, product) in db.iter().enumerate(){
+        if no == serial-1 {
+            product_output(product, no);
+            return;
+        }
+    }
+}
+
+fn view_all_product(path:&str){
+    let db:Vec<Product> = match load_database(path) {
+        Ok(product) => product,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    for (no, product) in db.iter().enumerate(){
+        
+        product_output(product, no);
+    }
+}
 
 
 
@@ -471,4 +580,37 @@ fn check_price(price:&str) -> Result<f64, String> {
     };
 
     Ok(price)
+}
+
+
+fn check_stock(price:&str) -> Result<i32, String> {
+    let stock:i32 = match price.trim().parse() {
+        Ok(num) => num,
+        Err(err) => {
+            return Err("Only Digits is accepted for price".to_string());
+        }
+    };
+
+    if stock <= 0 {
+        return Err("Price cannot be less than or equall to zero".to_string());
+    };
+
+    Ok(stock)
+}
+
+
+fn get_category(input:&str) -> Option<Category> {
+    match input.trim().to_lowercase().as_str() {
+        "1" => Some(Category::Food),
+        "2" => Some(Category::Electronics),
+        "3" => Some(Category::Fashion),
+        "5" => Some(Category::Computing), 
+        "4" => Some(Category::Grocery),
+        _ =>  None
+    }
+}
+
+
+fn product_output(product:&Product, serial_no:usize) {
+    println!("{}.\nName: {}\nPrice: {}\nStock: {}\nCategory: {:?}\n", serial_no+1, product.name.trim(), product.price, product.stock, product.category);
 }
