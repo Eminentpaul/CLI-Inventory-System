@@ -9,12 +9,12 @@ use argon2::{
     },
     Argon2
 };
-use rand::{random, rngs::OsRng};
+use rand::{random, rngs::OsRng, seq::index};
 use std::fs::File;
 use validator::{ValidateEmail, Validate};
 
 // User Types 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 enum UserType {
     Admin,
     Guest
@@ -109,14 +109,14 @@ impl Product {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Cart {
-    user: User,
+    user: Account,
     product: Product,
     quantity: i32,
     active: bool
 }
 
 impl Cart {
-    fn new(user: &User, product: &Product) -> Self {
+    fn new(user: &Account, product: &Product) -> Self {
         Self { 
             user: user.clone(), 
             product: product.clone(), 
@@ -131,11 +131,12 @@ fn main() {
     println!("INVENTORY SYSTEM");
     let acct_path = "account.json";
     let product_path = "product.json";
+    let cart_path = "cart.json";
 
     let mut logged_in_account: Option<Account> = None;
     loop {
 
-        println!("Options: \n1. Add Product\n2. View All Products\n3. View Single Product\n4. Update Product\n5. Delete Product\n6. Save Inventory\n7. View Cart\n8. View Orders\n9. Create Account\n10. Login\n11. Exit");
+        println!("Options: \n1. Add Product\n2. View All Products\n3. View Single Product\n4. Update Product\n5. Delete Product\n6. Save Inventory\n7. View Cart\n8. View Orders\n9. Create Account\n10. Change User Type\n11. Login\n12. Exit");
 
         let input = user_input("Please Select an Option:");
 
@@ -225,7 +226,7 @@ fn main() {
                 product_output(&product, serial-1);
 
 
-                println!("Product Options:\n1. Restock Product\n2. Sell Product\n3. Delete Product");
+                println!("Product Options:\n1. Restock Product\n2. Add to Cart\n3. Delete Product");
                 let input = user_input("Select an Option:");
 
                 match input.trim() {
@@ -236,18 +237,35 @@ fn main() {
                                     println!("{}", err);
                                     return;
                                 }
+                            };
 
                         
-                            };
-                        let stock = &user_input("Enter the number of Stocks:");
-                        restock(stock, serial, product_path);
+                        if active_account.user.user_type == UserType::Admin {
+                            let stock = &user_input("Enter the number of Stocks:");
+                            restock(stock, serial, product_path);
+                        }else {
+                            println!("Only Admin can restock a product");
+                            // return;
+                        }
                     },
+
+                    "2" => {
+                        let active_account = match verify_login(logged_in_account.clone()) {
+                                Ok(account) => account,
+                                Err(err) => {
+                                    println!("{}", err);
+                                    return;
+                                }
+                            };
+
+                        add_to_cart(&active_account, &product, cart_path);
+                    }
 
                     _ => println!("Invalid Input")
                 }
             },
 
-            "11" => {
+            "9" => {
                 let full_name = user_input("Enter Full Name:");
                 let email = user_input("Enter Your Email:");
 
@@ -283,7 +301,19 @@ fn main() {
                 
             },
 
-            "12" => {
+            "10" => {
+                match change_user_type(&logged_in_account, acct_path) {
+                    Ok(done) => {
+                        println!("{}", done)
+                    },
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+            },
+
+            "11" => {
                 println!("Account Login");
                 let phone_no = user_input("Enter Your Phone Number:");
                 let phone_no = match check_phone_number(&phone_no) {
@@ -467,7 +497,7 @@ fn restock(stock:&str, serial_no:usize, path:&str) {
 
     match db.get_mut(serial_no-1) {
         Some(product) => {
-            product.stock = new_stock;
+            product.stock += new_stock;
             
         },
         None => println!("Product not Found!")
@@ -488,6 +518,106 @@ fn restock(stock:&str, serial_no:usize, path:&str) {
         println!("{} Product Restocked not Successfully", db[serial_no-1].name)
     }
 }
+
+fn add_to_cart(user: &Account, product:&Product, path:&str) {
+    let mut cart_db: Vec<Cart> = match  load_database(path) {
+        Ok(cart) => cart,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    let cart = Cart::new(user, product);
+    cart_db.push(cart);
+
+
+    let saved = match save_file(path, &cart_db) {
+        Ok(done) => done, 
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    if saved {
+        println!("Product Successfully Added to the Cart")
+    }else {
+        println!("Product Not Added to the Cart")
+    }
+}
+
+
+fn change_user_type(account:&Option<Account>, path:&str) -> Result<String, String> {
+    let active_account = match verify_login(account.clone()) {
+        Ok(account) => account,
+        Err(err) => {
+            return Err(err.to_string());            
+        }
+    };
+
+    if active_account.user.user_type == UserType::Admin {
+        let mut account_db: Vec<Account> = match load_database(path) {
+            Ok(acct) => acct,
+            Err(err) => {
+                return Err(err.to_string());
+            }
+        };
+
+        for (index, account) in account_db.iter().enumerate() {
+            println!("User Accounts:\n{}. Full_name: {}\nEmail: {}\nUser Type: {}\nAccount Number: {}\n---------------------",
+            index+1, 
+            account.user.name.trim(),
+            account.user.email.trim(),
+            match account.user.user_type {
+                UserType::Admin => "Admin",
+                UserType::Guest => "Guest"
+            },
+            account.account_number
+        )
+
+        
+        }
+
+        let choosen_acct = user_input("Select a User:");
+
+        let user_index:usize = match choosen_acct.trim().parse() {
+            Ok(index) => index,
+            Err(err) => {
+                return Err("Invalid Input for the User Account".to_string());
+                
+            }
+        };
+
+        match account_db.get_mut(user_index-1) {
+            Some(acct) => {
+                acct.user.user_type = UserType::Admin
+            },
+            None => return Err("User Not Find".to_string())
+        }
+
+        let saved = match save_file(path, &account_db) {
+            Ok(done) => done,
+            Err(err) => {
+                return Err(err.to_string());
+            }
+        };
+
+        if saved {
+            Ok("Account User Type Changed Successfully!".to_string())
+        }else {
+            Err("Change of User Type not Successful\n".to_string())
+        }
+    }else {
+        return Err("Only Authorized User can perform this action!".to_string())
+    }
+    
+}
+
+
+
+
+
 
 
 
@@ -713,3 +843,4 @@ fn get_category(input:&str) -> Option<Category> {
 fn product_output(product:&Product, serial_no:usize) {
     println!("{}.\nName: {}\nPrice: {}\nStock: {}\nCategory: {:?}\n", serial_no+1, product.name.trim(), product.price, product.stock, product.category);
 }
+
