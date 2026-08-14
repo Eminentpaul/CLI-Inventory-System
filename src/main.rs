@@ -9,7 +9,7 @@ use argon2::{
     },
     Argon2
 };
-use rand::rngs::OsRng;
+use rand::{random, rngs::OsRng};
 use std::fs::File;
 use validator::{ValidateEmail, Validate};
 
@@ -107,6 +107,26 @@ impl Product {
 }
 
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct Cart {
+    user: User,
+    product: Product,
+    quantity: i32,
+    active: bool
+}
+
+impl Cart {
+    fn new(user: &User, product: &Product) -> Self {
+        Self { 
+            user: user.clone(), 
+            product: product.clone(), 
+            quantity: 1, 
+            active: true
+         }
+    }
+}
+
+
 fn main() {
     println!("INVENTORY SYSTEM");
     let acct_path = "account.json";
@@ -115,7 +135,7 @@ fn main() {
     let mut logged_in_account: Option<Account> = None;
     loop {
 
-        println!("Options: \n1. Add Product\n2. View All Products\n3. View Single Product\n4. Restock Product\n5. Sell Product\n6. Update Product\n7. Delete Product\n8. Save Inventory\n9. View Cart\n10. View Orders\n11. Create Account\n12. Login\n13. Exit");
+        println!("Options: \n1. Add Product\n2. View All Products\n3. View Single Product\n4. Update Product\n5. Delete Product\n6. Save Inventory\n7. View Cart\n8. View Orders\n9. Create Account\n10. Login\n11. Exit");
 
         let input = user_input("Please Select an Option:");
 
@@ -194,7 +214,37 @@ fn main() {
                     }
                 };
 
-                view_product(&product_input, serial);
+                let mut product = match view_product(&product_path, serial) {
+                    Ok(prod) => prod,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+                product_output(&product, serial-1);
+
+
+                println!("Product Options:\n1. Restock Product\n2. Sell Product\n3. Delete Product");
+                let input = user_input("Select an Option:");
+
+                match input.trim() {
+                    "1" => {
+                        let active_account = match verify_login(logged_in_account.clone()) {
+                                Ok(account) => account,
+                                Err(err) => {
+                                    println!("{}", err);
+                                    return;
+                                }
+
+                        
+                            };
+                        let stock = &user_input("Enter the number of Stocks:");
+                        restock(stock, serial, product_path);
+                    },
+
+                    _ => println!("Invalid Input")
+                }
             },
 
             "11" => {
@@ -356,21 +406,26 @@ fn add_product(price:f64, stock:i32, name:&str, category: Category, path:&str) {
 }   
 
 
-fn view_product(path:&str, serial:usize) {
+fn view_product(path:&str, serial:usize) -> Result<Product, String> {
     let db:Vec<Product> = match load_database(path) {
         Ok(product) => product,
         Err(err) => {
-            println!("{}", err);
-            return;
+            return Err(err.to_string());
+            
         }
     };
 
-    for (no, product) in db.iter().enumerate(){
-        if no == serial-1 {
-            product_output(product, no);
-            return;
-        }
+   
+    println!("============================\nProduct Detials\n-----------------");
+    match db.get(serial-1) {
+        Some(product) => {
+            Ok(product.clone())
+        },
+        None => return Err("Product not Found!".to_string())
     }
+
+    // product_output(&db[serial-1], serial-1);
+    
 }
 
 fn view_all_product(path:&str){
@@ -382,13 +437,57 @@ fn view_all_product(path:&str){
         }
     };
 
+    if db.is_empty(){
+        println!("There is no Available Product");
+        return;
+    }
+
     for (no, product) in db.iter().enumerate(){
         
         product_output(product, no);
     }
 }
 
+fn restock(stock:&str, serial_no:usize, path:&str) {
+    let mut db: Vec<Product> = match load_database(path) {
+        Ok(prod) => prod,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
 
+    let new_stock = match check_stock(stock) {
+        Ok(stock) => stock,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    match db.get_mut(serial_no-1) {
+        Some(product) => {
+            product.stock = new_stock;
+            
+        },
+        None => println!("Product not Found!")
+    }
+
+
+    let saved = match save_file(path, &db) {
+        Ok(done) => done,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+    
+    if saved {
+        println!("{} Product Restocked Successfully", db[serial_no-1].name)
+    }else {
+        println!("{} Product Restocked not Successfully", db[serial_no-1].name)
+    }
+}
 
 
 
@@ -562,7 +661,7 @@ fn verify_login(account:Option<Account>) -> Result<Account, String> {
                 ActiveStatus::LoggedOut => Err("Please Login to Access this Page".to_string())
             }
         },
-        None => Err("You can't Access This Page".to_string())
+        None => Err("You can't Access This Page because you are not logged in".to_string())
     }
 }
 
@@ -583,8 +682,8 @@ fn check_price(price:&str) -> Result<f64, String> {
 }
 
 
-fn check_stock(price:&str) -> Result<i32, String> {
-    let stock:i32 = match price.trim().parse() {
+fn check_stock(stock:&str) -> Result<i32, String> {
+    let stock:i32 = match stock.trim().parse() {
         Ok(num) => num,
         Err(err) => {
             return Err("Only Digits is accepted for price".to_string());
