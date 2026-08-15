@@ -136,7 +136,7 @@ fn main() {
     let mut logged_in_account: Option<Account> = None;
     loop {
 
-        println!("Options: \n1. Add Product\n2. View All Products\n3. View Single Product\n5. View All Cart\n6. View My Cart\n7. View All Orders\n8. View My Orders\n9. Create Account\n10. Change User Type\n11. Login\n12. Exit");
+        println!("Options: \n1. Add Product\n2. View All Products\n3. View Single Product\n4. View All Cart\n5. View My Cart\n6. View All Orders\n7. View My Orders\n8. Create Account\n9. Change User Type\n10. Login\n11. Exit");
 
         let input = user_input("Please Select an Option:");
 
@@ -190,7 +190,12 @@ fn main() {
                     }
                 };
 
-                add_product(price, stock, &product_name, category, product_path);
+                if active_account.user.user_type == UserType::Admin {
+                    add_product(price, stock, &product_name, category, product_path);
+
+                }else {
+                    println!("Only Admin can perform this action")
+                }
 
                 
 
@@ -232,7 +237,23 @@ fn main() {
                 single_product_commands(input, serial, product, cart_path, product_path, &logged_in_account);
             },
 
-            "9" => {
+            "4" => {
+                let active_account = match verify_login(logged_in_account.clone()) {
+                    Ok(account) => account,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+                if active_account.user.user_type == UserType::Admin {
+                    view_all_cart(cart_path);
+                }else {
+                    println!("Only Admin can perform this action")
+                }
+            },
+
+            "8" => {
                 let full_name = user_input("Enter Full Name:");
                 let email = user_input("Enter Your Email:");
 
@@ -268,7 +289,7 @@ fn main() {
                 
             },
 
-            "10" => {
+            "9" => {
                 match change_user_type(&logged_in_account, acct_path) {
                     Ok(done) => {
                         println!("{}", done)
@@ -280,7 +301,7 @@ fn main() {
                 };
             },
 
-            "11" => {
+            "10" => {
                 println!("Account Login");
                 let phone_no = user_input("Enter Your Phone Number:");
                 let phone_no = match check_phone_number(&phone_no) {
@@ -303,7 +324,7 @@ fn main() {
                 // println!("Account acive: {:#?}", logged_in_account);
             },
 
-            "12" => {
+            "11" => {
                 println!("Exiting.....");
                 break;
             }
@@ -697,6 +718,25 @@ fn delete_product(path:&str, serial:usize) {
 }
 
 
+fn view_all_cart(path:&str) {
+    let cart_db: Vec<Cart> = match load_database(path) {
+        Ok(cart) => cart,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+
+    if !cart_db.is_empty(){
+        println!("All Available Carts");
+        for (index, cart) in cart_db.iter().enumerate() {
+            cart_output(index, cart);
+        }
+    }else {
+        println!("There is no Available Cart")
+    }
+}
 
 
 
@@ -710,6 +750,24 @@ fn delete_product(path:&str, serial:usize) {
 
 
 
+
+
+
+
+
+
+fn cart_output(index:usize, cart:&Cart){
+    println!(
+            "----------------------\n{} User Name: {}    -    User Email: {}\nProduct Name: {}  -  Product Price: N{:.2}\nQuantity: {}   -   Total: N{:.2}\n",
+            index +1,
+            cart.user.user.name.trim().to_uppercase(),
+            cart.user.user.email.trim().to_lowercase(),
+            cart.product.name.trim(),
+            cart.product.price,
+            cart.quantity,
+            cart.quantity as f64 * cart.product.price
+        )
+}
 
 
 fn hash_password(password: &str) -> String {
