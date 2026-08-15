@@ -116,11 +116,11 @@ struct Cart {
 }
 
 impl Cart {
-    fn new(user: &Account, product: &Product) -> Self {
+    fn new(user: &Account, product: &Product, quantity:i32) -> Self {
         Self { 
             user: user.clone(), 
             product: product.clone(), 
-            quantity: 1, 
+            quantity: quantity, 
             active: true
          }
     }
@@ -136,7 +136,7 @@ fn main() {
     let mut logged_in_account: Option<Account> = None;
     loop {
 
-        println!("Options: \n1. Add Product\n2. View All Products\n3. View Single Product\n5. View Cart\n6. View Orders\n7. Create Account\n8. Change User Type\n9. Login\n10. Exit");
+        println!("Options: \n1. Add Product\n2. View All Products\n3. View Single Product\n5. View All Cart\n6. View My Cart\n7. View All Orders\n8. View My Orders\n9. Create Account\n10. Change User Type\n11. Login\n12. Exit");
 
         let input = user_input("Please Select an Option:");
 
@@ -229,76 +229,10 @@ fn main() {
                 println!("Product Options:\n1. Restock Product\n2. Update Product\n3. Add to Cart\n4. Delete Product");
                 let input = user_input("Select an Option:");
 
-                match input.trim() {
-                    "1" => {
-                        let active_account = match verify_login(logged_in_account.clone()) {
-                                Ok(account) => account,
-                                Err(err) => {
-                                    println!("{}", err);
-                                    return;
-                                }
-                            };
-
-                        
-                        if active_account.user.user_type == UserType::Admin {
-                            let stock = &user_input("Enter the number of Stocks:");
-                            restock(stock, serial, product_path);
-                        }else {
-                            println!("Only Admin can restock a product");
-                            // return;
-                        }
-                    },
-
-                    "2" => {
-                        let active_account = match verify_login(logged_in_account.clone()) {
-                                Ok(account) => account,
-                                Err(err) => {
-                                    println!("{}", err);
-                                    return;
-                                }
-                            };
-
-                        
-                        if active_account.user.user_type == UserType::Admin {
-                            update_product(serial, product_path);
-                        }else {
-                            println!("Only Admin has the Permission to Perform the action")
-                        }
-                    },
-
-                    "3" => {
-                        let active_account = match verify_login(logged_in_account.clone()) {
-                                Ok(account) => account,
-                                Err(err) => {
-                                    println!("{}", err);
-                                    return;
-                                }
-                            };
-
-                        add_to_cart(&active_account, &product, cart_path);
-                    },
-
-                    "4" => {
-                        let active_account = match verify_login(logged_in_account.clone()) {
-                                Ok(account) => account,
-                                Err(err) => {
-                                    println!("{}", err);
-                                    return;
-                                }
-                            };
-
-                        if active_account.user.user_type == UserType::Admin {
-                            delete_product(product_path, serial);
-                        }else {
-                            println!("Only Admin has the Permission to Perform the action")
-                        }
-                    }
-
-                    _ => println!("Invalid Input for Product Actions")
-                }
+                single_product_commands(input, serial, product, cart_path, product_path, &logged_in_account);
             },
 
-            "7" => {
+            "9" => {
                 let full_name = user_input("Enter Full Name:");
                 let email = user_input("Enter Your Email:");
 
@@ -334,7 +268,7 @@ fn main() {
                 
             },
 
-            "8" => {
+            "10" => {
                 match change_user_type(&logged_in_account, acct_path) {
                     Ok(done) => {
                         println!("{}", done)
@@ -346,7 +280,7 @@ fn main() {
                 };
             },
 
-            "9" => {
+            "11" => {
                 println!("Account Login");
                 let phone_no = user_input("Enter Your Phone Number:");
                 let phone_no = match check_phone_number(&phone_no) {
@@ -368,6 +302,11 @@ fn main() {
 
                 // println!("Account acive: {:#?}", logged_in_account);
             },
+
+            "12" => {
+                println!("Exiting.....");
+                break;
+            }
 
             _ => {
                 println!("Invalid Input")
@@ -622,7 +561,7 @@ fn restock(stock:&str, serial_no:usize, path:&str) {
     }
 }
 
-fn add_to_cart(user: &Account, product:&Product, path:&str) {
+fn add_to_cart(user: &Account, quantity:i32, product:&Product, path:&str) {
     let mut cart_db: Vec<Cart> = match  load_database(path) {
         Ok(cart) => cart,
         Err(err) => {
@@ -631,23 +570,29 @@ fn add_to_cart(user: &Account, product:&Product, path:&str) {
         }
     };
 
-    let cart = Cart::new(user, product);
-    cart_db.push(cart);
+    if product.stock >= quantity {
+        let cart = Cart::new(user, product, quantity);
+        cart_db.push(cart);
 
+        let saved = match save_file(path, &cart_db) {
+            Ok(done) => done, 
+            Err(err) => {
+                println!("{}", err);
+                return;
+            }
+        };
 
-    let saved = match save_file(path, &cart_db) {
-        Ok(done) => done, 
-        Err(err) => {
-            println!("{}", err);
-            return;
+        if saved {
+            println!("Product Successfully Added to the Cart")
+        }else {
+            println!("Product Not Added to the Cart")
         }
-    };
-
-    if saved {
-        println!("Product Successfully Added to the Cart")
     }else {
-        println!("Product Not Added to the Cart")
+        println!("Product Out of Stock")
     }
+
+
+    
 }
 
 
@@ -950,12 +895,12 @@ fn check_stock(stock:&str) -> Result<i32, String> {
     let stock:i32 = match stock.trim().parse() {
         Ok(num) => num,
         Err(err) => {
-            return Err("Only Digits is accepted for price".to_string());
+            return Err("Only Digits is accepted".to_string());
         }
     };
 
     if stock <= 0 {
-        return Err("Price cannot be less than or equall to zero".to_string());
+        return Err("Number cannot be less than or equall to zero".to_string());
     };
 
     Ok(stock)
@@ -978,3 +923,110 @@ fn product_output(product:&Product, serial_no:usize) {
     println!("{}.\nName: {}\nPrice: {}\nStock: {}\nCategory: {:?}\n", serial_no+1, product.name.trim(), product.price, product.stock, product.category);
 }
 
+
+fn single_product_commands(input: String, serial:usize, product: Product, cart_path: &str, product_path:&str, logged_in_account: &Option<Account>, ){
+    match input.trim() {
+        "1" => {
+            let active_account = match verify_login(logged_in_account.clone()) {
+                    Ok(account) => account,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+            
+            if active_account.user.user_type == UserType::Admin {
+                let stock = &user_input("Enter the number of Stocks:");
+                restock(stock, serial, product_path);
+            }else {
+                println!("Only Admin can restock a product");
+                // return;
+            }
+        },
+
+        "2" => {
+            let active_account = match verify_login(logged_in_account.clone()) {
+                    Ok(account) => account,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+            
+            if active_account.user.user_type == UserType::Admin {
+                update_product(serial, product_path);
+            }else {
+                println!("Only Admin has the Permission to Perform the action")
+            }
+        },
+
+        "3" => {
+            let active_account = match verify_login(logged_in_account.clone()) {
+                    Ok(account) => account,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+            let mut cart_db:Vec<Cart> = match load_database(cart_path) {
+                Ok(cart) => cart,
+                Err(err) => {
+                    println!("{}", err);
+                    return;
+                }
+            };
+
+            let quantity = user_input("Enter Needed Quantity:");
+            let quantity = match check_stock(&quantity) {
+                Ok(num) => num,
+                Err(err) => {
+                    println!("{}", err);
+                    return;
+                }
+            };
+
+
+            if let Some(prod) = cart_db.iter_mut().find(|cart_product| cart_product.user.account_number == active_account.account_number && cart_product.product.name.trim().to_lowercase() == product.name.trim().to_lowercase()) {
+                if quantity > product.stock {
+                    println!("The requesting quantity is more than the Available stock")
+                }else {
+                    prod.quantity += quantity;
+                }
+
+            match save_file(cart_path, &cart_db) {
+                    Ok(done) => done,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+            } else {
+                // println!("Not increased")
+                add_to_cart(&active_account, quantity, &product, cart_path);
+            }
+        
+        
+        },
+
+        "4" => {
+            let active_account = match verify_login(logged_in_account.clone()) {
+                    Ok(account) => account,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+            if active_account.user.user_type == UserType::Admin {
+                delete_product(product_path, serial);
+            }else {
+                println!("Only Admin has the Permission to Perform the action")
+            }
+        }
+
+        _ => println!("Invalid Input for Product Actions")
+    }
+}
