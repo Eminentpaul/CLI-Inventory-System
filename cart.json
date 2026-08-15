@@ -19,7 +19,7 @@
       "category": "Food"
     },
     "quantity": 3,
-    "active": true
+    "active": false
   },
   {
     "user": {
@@ -36,11 +36,11 @@
     },
     "product": {
       "name": "Dell Latitude 5511\r\n",
-      "price": 450000.0,
+      "price": 450.0,
       "stock": 15,
       "category": "Computing"
     },
     "quantity": 2,
-    "active": true
+    "active": false
   }
 ]

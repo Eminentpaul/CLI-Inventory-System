@@ -40,6 +40,15 @@ enum Category {
     Computing
 }
 
+#[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
+enum OrderStatus {
+    Paid,
+    Processing,
+    Shipped,
+    Delivered,
+    Cancelled
+}
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct User {
@@ -127,16 +136,48 @@ impl Cart {
 }
 
 
+
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct Order {
+    user: Account,
+    carts: Vec<Cart>,
+    grand_total: f64,
+    status: OrderStatus
+}
+
+impl Order {
+    fn new(carts:Vec<Cart>, user:&Account) -> Self {
+        
+        let mut grand_total:f64 = 0.0;
+        
+        if !carts.is_empty(){
+            for cart in carts.iter(){
+                grand_total += (cart.quantity as f64 * cart.product.price)
+            }
+        }
+
+        Self { 
+            user: user.clone(), 
+            carts, 
+            grand_total, 
+            status: OrderStatus::Paid
+         }
+    }
+}
+
+
 fn main() {
     println!("INVENTORY SYSTEM");
     let acct_path = "account.json";
     let product_path = "product.json";
     let cart_path = "cart.json";
+    let order_path = "order.json";
 
     let mut logged_in_account: Option<Account> = None;
     loop {
 
-        println!("Options: \n1. Add Product\n2. View All Products\n3. View Single Product\n4. View All Cart\n5. View My Cart\n6. View All Orders\n7. View My Orders\n8. Create Account\n9. Change User Type\n10. Login\n11. Exit");
+        println!("Options: \n1. Add Product\n2. View All Products\n3. View Single Product\n4. View All Cart\n5. View My Cart\n6. View All Orders\n7. View My Orders\n8. Create Account\n9. Change User Type\n10. Login\n11. Fund my Account\n12. Exit");
 
         let input = user_input("Please Select an Option:");
 
@@ -253,6 +294,41 @@ fn main() {
                 }
             },
 
+            "5" => {
+                let active_account = match verify_login(logged_in_account.clone()) {
+                    Ok(account) => account,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+                let carts:Vec<Cart> = match view_my_cart(cart_path, &active_account) {
+                    Ok(cart) => {
+                        // println!("{:#?}", cart);
+                        cart
+                    },
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+                println!("Cart Options:\n1. Order Now\n2. Delete Item\n3. Clear Cart");
+                let input = user_input("Select an Option:");
+
+
+                match input.trim(){
+                    "1" => {
+                        // Placing Order 
+                        order_now(&active_account, carts, acct_path, cart_path, order_path);
+                    },
+
+
+                    _ => println!("Invalid Input")
+                }
+            },
+
             "8" => {
                 let full_name = user_input("Enter Full Name:");
                 let email = user_input("Enter Your Email:");
@@ -325,6 +401,29 @@ fn main() {
             },
 
             "11" => {
+                // Funding Account codes 
+                let active_account = match verify_login(logged_in_account.clone()) {
+                    Ok(account) => account,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+                let amount = user_input("Enter Amount to Fund:");
+                let new_amount = match check_price(&amount) {
+                    Ok(amount) => amount,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+                fund_my_account(&active_account, new_amount, acct_path);
+
+            },
+
+            "12" => {
                 println!("Exiting.....");
                 break;
             }
@@ -739,6 +838,160 @@ fn view_all_cart(path:&str) {
 }
 
 
+fn view_my_cart(path:&str, account:&Account)-> Result<Vec<Cart>, String> {
+    let cart_db:Vec<Cart> = match load_database(path) {
+        Ok(cart) => cart,
+        Err(err) => {
+            return Err(err);
+        }
+    };
+
+    let mut carts:Vec<Cart> = Vec::new();
+
+    if !cart_db.is_empty(){
+        for (index, my_cart) in cart_db.iter().enumerate() {
+            if my_cart.user.account_number == account.account_number && my_cart.active {
+                cart_output(index, my_cart);
+                carts.push(my_cart.clone());
+            }
+        }
+    }else {
+        return Err("Your Cart is Empty!".to_string());
+        
+    }
+
+    Ok(carts)
+}
+
+
+fn fund_my_account(account:&Account, amount:f64, path:&str){
+    let mut acct_db:Vec<Account> = match load_database(path) {
+        Ok(account) => account,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    let acct_index:usize = match acct_db.iter().position(|c| c.account_number == account.account_number) {
+        Some(index) => index,
+        None => {
+            println!("Account not Found!");
+            return;
+        }
+    };
+
+
+    
+
+    acct_db[acct_index].balance += amount;
+
+    match save_file(path, &acct_db) {
+        Ok(done) => {
+            println!("Account funded Successfully");
+        },
+        Err(err) => {
+            println!("{err}");
+            return;
+        }
+    };
+
+
+}
+
+
+fn order_now(account:&Account, carts:Vec<Cart>, acct_path:&str, cart_path: &str, order_path:&str){
+    let mut cart_db:Vec<Cart> = match load_database(cart_path) {
+        Ok(cart) => cart,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    let mut account_db:Vec<Account> = match load_database(acct_path) {
+        Ok(acct) => acct,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    let mut acct_index = match account_db.iter().position(|a|a.account_number == account.account_number) {
+        Some(index) => index,
+        None=> {
+            println!("Account not Found!");
+            return;
+        }
+    };
+
+    let mut order_db:Vec<Order> = match load_database(order_path){
+        Ok(order) => order,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    let new_order = Order::new(carts, account);
+    let total = &new_order.grand_total;
+    
+    if account_db[acct_index].balance < new_order.grand_total {
+        println!("Insufficient Funds to complete the Order");
+        return;
+    }
+
+    order_db.push(new_order.clone());
+
+    match save_file(order_path, &order_db) {
+        Ok(done) => {
+            // deactivate cart products belonging to this account
+            for prod in cart_db.iter_mut() {
+                if prod.user.account_number == account.account_number {
+                    prod.active = false;
+                }
+            }
+            // save updated cart database
+            match save_file(cart_path, &cart_db) {
+                Ok(_) => {}
+                Err(err) => {
+                    println!("{}", err);
+                    return;
+                }
+            }
+
+            match account_db.get_mut(acct_index) {
+                Some(acct) => {
+                    acct.balance -= total
+                },
+                _ => println!("Not Executed")
+            }
+
+            // save updated cart database
+            match save_file(acct_path, &account_db) {
+                Ok(_) => {}
+                Err(err) => {
+                    println!("{}", err);
+                    return;
+                }
+            }
+
+            println!("Ordered Successfully!")
+    },
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    }
+}
+
+
+   
+
+
+
+
+
 
 
 
@@ -758,7 +1011,7 @@ fn view_all_cart(path:&str) {
 
 fn cart_output(index:usize, cart:&Cart){
     println!(
-            "----------------------\n{} User Name: {}    -    User Email: {}\nProduct Name: {}  -  Product Price: N{:.2}\nQuantity: {}   -   Total: N{:.2}\n",
+            "----------------------\n{}. User Name: {}    -    User Email: {}\nProduct Name: {}  -  Product Price: N{:.2}\nQuantity: {}   -   Total: N{:.2}\n",
             index +1,
             cart.user.user.name.trim().to_uppercase(),
             cart.user.user.email.trim().to_lowercase(),
