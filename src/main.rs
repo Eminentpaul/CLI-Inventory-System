@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-use std::{format, io::{self, BufReader, BufWriter}, println, ptr::null};
+use std::{format, io::{self, BufReader, BufWriter}, matches, println, ptr::null};
 use serde::{Serialize, Deserialize};
 
 use argon2::{
@@ -303,7 +303,7 @@ fn main() {
                     }
                 };
 
-                let carts:Vec<Cart> = match view_my_cart(cart_path, &active_account) {
+                let mut carts:Vec<Cart> = match view_my_cart(cart_path, &active_account) {
                     Ok(cart) => {
                         // println!("{:#?}", cart);
                         cart
@@ -323,6 +323,10 @@ fn main() {
                         // Placing Order 
                         order_now(&active_account, carts, acct_path, cart_path, order_path);
                     },
+
+                    "2" => {
+                        delete_item_from_my_cart(&active_account, &mut carts, cart_path);
+                    }
 
 
                     _ => println!("Invalid Input")
@@ -851,13 +855,16 @@ fn view_my_cart(path:&str, account:&Account)-> Result<Vec<Cart>, String> {
     if !cart_db.is_empty(){
         for (index, my_cart) in cart_db.iter().enumerate() {
             if my_cart.user.account_number == account.account_number && my_cart.active {
-                cart_output(index, my_cart);
                 carts.push(my_cart.clone());
             }
         }
     }else {
         return Err("Your Cart is Empty!".to_string());
         
+    }
+
+    for (index, cart) in carts.iter().enumerate(){
+        cart_output(index, cart)
     }
 
     Ok(carts)
@@ -982,6 +989,78 @@ fn order_now(account:&Account, carts:Vec<Cart>, acct_path:&str, cart_path: &str,
             println!("{}", err);
             return;
         }
+    }
+}
+
+
+fn delete_item_from_my_cart(account:&Account, carts:&mut Vec<Cart>, cart_path: &str) {
+    let mut cart_db: Vec<Cart> = match load_database(cart_path) {
+        Ok(cart) => cart,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    let mut dindex:usize = 0;
+
+    for (index, cart) in carts.iter().enumerate(){
+        cart_output(index, cart);
+    }
+
+    let input = user_input("Select an Item to delete:");
+    let index:usize = match input.trim().parse() {
+        Ok(num) => num,
+        Err(err) => {
+            println!("Invalid Input");
+            return;
+        }
+    };
+
+    match carts.get_mut(index-1){
+        Some(my_cart) => {
+            dindex = match cart_db.iter().position(
+                |c| 
+                (c.user.account_number == account.account_number) && 
+                (c.user.account_number == my_cart.user.account_number) &&
+                (c.quantity == my_cart.quantity) &&
+                (c.product.price == my_cart.product.price) 
+            )  {
+                Some(index) => index,
+                None => {
+                    println!("Cart Item not Found!");
+                    return;
+                }
+            };
+        },
+        None => println!("")
+    }
+
+    match cart_db.get_mut(dindex) {
+        Some(cart) => {
+            cart_db.remove(dindex);
+
+            match save_file(cart_path, &cart_db) {
+                Ok(done) => println!("Item removed Successfully"),
+                Err(err) => println!("Item Not Removed!")
+            }
+        },
+        None => println!("Item not found!")
+    }
+}
+
+
+fn clear_my(account:&Account, carts:&mut Vec<Cart>, cart_path: &str) {
+    let mut cart_db:Vec<Cart> = match load_database(cart_path)  {
+        Ok(cart) => cart,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    for my_cart in carts.iter_mut(){
+        
     }
 }
 

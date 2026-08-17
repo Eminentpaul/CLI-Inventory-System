@@ -13,13 +13,79 @@
       "balance": 0.0
     },
     "product": {
-      "name": "Rice\r\n",
-      "price": 200.0,
-      "stock": 30,
-      "category": "Food"
+      "name": "Dell Latitude 5511\r\n",
+      "price": 450.0,
+      "stock": 15,
+      "category": "Computing"
+    },
+    "quantity": 2,
+    "active": true
+  },
+  {
+    "user": {
+      "user": {
+        "name": "Oshi Paulinus Offorbuike\r\n",
+        "address": "93b Orifite Street\r\n",
+        "email": "eminent2547@gmail.com\r\n",
+        "user_type": "Admin",
+        "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$NKSuFEfGZ+I5dPuQfPY6ng$ZkGPIlmdjO3VhPtUAmZ8wrVriUtouVAlhUayyq6BZ4w",
+        "status": "LoggedIn"
+      },
+      "account_number": "8143122946",
+      "balance": 0.0
+    },
+    "product": {
+      "name": "iPhone 16\r\n",
+      "price": 202.0,
+      "stock": 5,
+      "category": "Computing"
+    },
+    "quantity": 2,
+    "active": true
+  },
+  {
+    "user": {
+      "user": {
+        "name": "Oshi Paulinus Offorbuike\r\n",
+        "address": "93b Orifite Street\r\n",
+        "email": "eminent2547@gmail.com\r\n",
+        "user_type": "Admin",
+        "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$NKSuFEfGZ+I5dPuQfPY6ng$ZkGPIlmdjO3VhPtUAmZ8wrVriUtouVAlhUayyq6BZ4w",
+        "status": "LoggedIn"
+      },
+      "account_number": "8143122946",
+      "balance": 0.0
+    },
+    "product": {
+      "name": "LG Smart TV\r\n",
+      "price": 50.0,
+      "stock": 3,
+      "category": "Electronics"
     },
     "quantity": 3,
-    "active": false
+    "active": true
+  },
+  {
+    "user": {
+      "user": {
+        "name": "Oshi Paulinus Offorbuike\r\n",
+        "address": "93b Orifite Street\r\n",
+        "email": "eminent2547@gmail.com\r\n",
+        "user_type": "Admin",
+        "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$NKSuFEfGZ+I5dPuQfPY6ng$ZkGPIlmdjO3VhPtUAmZ8wrVriUtouVAlhUayyq6BZ4w",
+        "status": "LoggedIn"
+      },
+      "account_number": "8143122946",
+      "balance": 0.0
+    },
+    "product": {
+      "name": "T-Shirt\r\n",
+      "price": 20.0,
+      "stock": 5,
+      "category": "Fashion"
+    },
+    "quantity": 4,
+    "active": true
   },
   {
     "user": {
@@ -32,15 +98,15 @@
         "status": "LoggedIn"
       },
       "account_number": "7031135009",
-      "balance": 0.0
+      "balance": 500.0
     },
     "product": {
-      "name": "Dell Latitude 5511\r\n",
-      "price": 450.0,
-      "stock": 15,
-      "category": "Computing"
+      "name": "T-Shirt\r\n",
+      "price": 20.0,
+      "stock": 5,
+      "category": "Fashion"
     },
-    "quantity": 2,
-    "active": false
+    "quantity": 1,
+    "active": true
   }
 ]
