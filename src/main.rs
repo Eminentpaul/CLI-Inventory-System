@@ -1,20 +1,17 @@
-#![allow(unused)]
+// #![allow(unused)]
 
 use serde::{Deserialize, Serialize};
 use std::{
-    format,
     io::{self, BufReader, BufWriter},
-    matches, println,
-    ptr::null,
 };
 
 use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
 };
-use rand::{random, rngs::OsRng, seq::index};
+use rand::{rngs::OsRng};
 use std::fs::File;
-use validator::{Validate, ValidateEmail};
+// use validator::{Validate, ValidateEmail};
 
 // User Types
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -144,7 +141,7 @@ impl Order {
 
         if !carts.is_empty() {
             for cart in carts.iter() {
-                grand_total += (cart.quantity as f64 * cart.product.price)
+                grand_total += cart.quantity as f64 * cart.product.price
             }
         }
 
@@ -183,7 +180,7 @@ fn main() {
                     }
                 };
 
-                let mut product_db: Vec<Product> = match load_database(product_path) {
+                let _product_db: Vec<Product> = match load_database(product_path) {
                     Ok(product) => product,
                     Err(err) => {
                         println!("{}", err);
@@ -249,7 +246,7 @@ fn main() {
                     }
                 };
 
-                let mut product = match view_product(&product_path, serial) {
+                let product = match view_product(&product_path, serial) {
                     Ok(prod) => prod,
                     Err(err) => {
                         println!("{}", err);
@@ -784,7 +781,7 @@ fn change_user_type(account: &Option<Account>, path: &str) -> Result<String, Str
 
         let user_index: usize = match choosen_acct.trim().parse() {
             Ok(index) => index,
-            Err(err) => {
+            Err(_) => {
                 return Err("Invalid Input for the User Account".to_string());
             }
         };
@@ -821,7 +818,7 @@ fn delete_product(path: &str, serial: usize) {
     };
 
     match prod_db.get_mut(serial - 1) {
-        Some(prod) => {
+        Some(_prod) => {
             prod_db.remove(serial - 1);
         }
         None => println!("Product not Found!"),
@@ -872,7 +869,7 @@ fn view_my_cart(path: &str, account: &Account) -> Result<Vec<Cart>, String> {
     let mut carts: Vec<Cart> = Vec::new();
 
     if !cart_db.is_empty() {
-        for (index, my_cart) in cart_db.iter().enumerate() {
+        for (_index, my_cart) in cart_db.iter().enumerate() {
             if my_cart.user.account_number == account.account_number && my_cart.active {
                 carts.push(my_cart.clone());
             }
@@ -911,7 +908,7 @@ fn fund_my_account(account: &Account, amount: f64, path: &str) {
     acct_db[acct_index].balance += amount;
 
     match save_file(path, &acct_db) {
-        Ok(done) => {
+        Ok(_done) => {
             println!("Account funded Successfully");
         }
         Err(err) => {
@@ -944,7 +941,7 @@ fn order_now(
         }
     };
 
-    let mut acct_index = match account_db
+    let acct_index = match account_db
         .iter()
         .position(|a| a.account_number == account.account_number)
     {
@@ -974,7 +971,7 @@ fn order_now(
     order_db.push(new_order.clone());
 
     match save_file(order_path, &order_db) {
-        Ok(done) => {
+        Ok(_done) => {
             // deactivate cart products belonging to this account
             for prod in cart_db.iter_mut() {
                 if prod.user.account_number == account.account_number {
@@ -1031,7 +1028,7 @@ fn delete_item_from_my_cart(account: &Account, carts: &mut Vec<Cart>, cart_path:
     let input = user_input("Select an Item to delete:");
     let index: usize = match input.trim().parse() {
         Ok(num) => num,
-        Err(err) => {
+        Err(_err) => {
             println!("Invalid Input");
             return;
         }
@@ -1056,12 +1053,12 @@ fn delete_item_from_my_cart(account: &Account, carts: &mut Vec<Cart>, cart_path:
     }
 
     match cart_db.get_mut(dindex) {
-        Some(cart) => {
+        Some(_cart) => {
             cart_db.remove(dindex);
 
             match save_file(cart_path, &cart_db) {
-                Ok(done) => println!("Item removed Successfully"),
-                Err(err) => println!("Item Not Removed!"),
+                Ok(_done) => println!("Item removed Successfully"),
+                Err(_err) => println!("Item Not Removed!"),
             }
         }
         None => println!("Item not found!"),
@@ -1096,7 +1093,7 @@ fn clear_my_cart(account: &Account, carts: &mut Vec<Cart>, cart_path: &str) {
             }
         };
         match cart_db.get_mut(index) {
-            Some(cart) => {
+            Some(_cart) => {
                 cart_db.remove(index);
             }
             None => {
@@ -1163,7 +1160,7 @@ fn update_order_status(path: &str, index: usize) {
             order.status = new_status;
 
             match save_file(path, &order_db) {
-                Ok(done) => {
+                Ok(_done) => {
                     println!("Order Updated Successfully");
                 }
                 Err(err) => {
@@ -1179,7 +1176,7 @@ fn update_order_status(path: &str, index: usize) {
 }
 
 fn view_my_orders(path: &str, account: &Account) {
-    let mut order_db: Vec<Order> = match load_database(path) {
+    let order_db: Vec<Order> = match load_database(path) {
         Ok(order) => order,
         Err(err) => {
             println!("{}", err);
@@ -1188,7 +1185,9 @@ fn view_my_orders(path: &str, account: &Account) {
     };
 
     for (index, order) in order_db.iter().enumerate() {
-        order_output(index, order);
+        if order.user.account_number == account.account_number {
+            order_output(index, order);
+        }
     }
 
     let input = user_input("Select an Order to Check Status:");
@@ -1207,7 +1206,7 @@ fn view_my_single_order(input: &str, path: &str) {
 
     let index: usize = match input.trim().parse() {
         Ok(num) => num,
-        Err(err) => {
+        Err(_err) => {
             println!("Invalid Input Selection");
             return;
         }
@@ -1304,8 +1303,8 @@ fn user_input(option: &str) -> String {
 fn load_database<T: serde::de::DeserializeOwned>(path: &str) -> Result<Vec<T>, String> {
     let file = match File::open(path) {
         Ok(file) => file,
-        Err(err) => {
-            let error = format!("Open File Error: {}", err);
+        Err(_err) => {
+            // let _error = format!("Open File Error: {}", err);
             return Ok(Vec::new());
         }
     };
@@ -1335,13 +1334,13 @@ fn save_file<T: Serialize>(path: &str, database: &Vec<T>) -> Result<bool, String
     let writer = BufWriter::new(file);
 
     match serde_json::to_writer_pretty(writer, &database) {
-        Ok(b) => Ok(true),
+        Ok(_b) => Ok(true),
         Err(_) => Err("File not saved!".to_string()),
     }
 }
 
 // fn validate_email(email:&str) -> bool {
-//     email.validate_email()
+//     email.validate_email()_
 // }
 
 fn validate_email(email: &str) -> bool {
@@ -1383,7 +1382,7 @@ fn verify_login(account: Option<Account>) -> Result<Account, String> {
 fn check_price(price: &str) -> Result<f64, String> {
     let price: f64 = match price.trim().parse() {
         Ok(num) => num,
-        Err(err) => {
+        Err(_err) => {
             return Err("Only Digits is accepted for price".to_string());
         }
     };
@@ -1398,7 +1397,7 @@ fn check_price(price: &str) -> Result<f64, String> {
 fn check_stock(stock: &str) -> Result<i32, String> {
     let stock: i32 = match stock.trim().parse() {
         Ok(num) => num,
-        Err(err) => {
+        Err(_err) => {
             return Err("Only Digits is accepted".to_string());
         }
     };
