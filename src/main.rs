@@ -1,35 +1,34 @@
 #![allow(unused)]
 
-use std::{format, io::{self, BufReader, BufWriter}, matches, println, ptr::null};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::{
+    format,
+    io::{self, BufReader, BufWriter},
+    matches, println,
+    ptr::null,
+};
 
 use argon2::{
-    password_hash::{
-        PasswordHash, PasswordHasher, PasswordVerifier, SaltString
-    },
-    Argon2
+    Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
 };
 use rand::{random, rngs::OsRng, seq::index};
 use std::fs::File;
-use validator::{ValidateEmail, Validate};
+use validator::{Validate, ValidateEmail};
 
-// User Types 
+// User Types
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 enum UserType {
     Admin,
-    Guest
+    Guest,
 }
 
-
-// Activeness 
+// Activeness
 #[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
 enum ActiveStatus {
     LoggedIn,
-    LoggedOut
+    LoggedOut,
 }
-
-
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 enum Category {
@@ -37,7 +36,7 @@ enum Category {
     Electronics,
     Fashion,
     Grocery,
-    Computing
+    Computing,
 }
 
 #[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
@@ -46,9 +45,8 @@ enum OrderStatus {
     Processing,
     Shipped,
     Delivered,
-    Cancelled
+    Cancelled,
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct User {
@@ -57,39 +55,40 @@ struct User {
     email: String,
     user_type: UserType,
     password_hash: String,
-    status: ActiveStatus
+    status: ActiveStatus,
 }
 
 impl User {
-    fn new(name:&str, address:&str, email:&str, password: &str) -> Self {
+    fn new(name: &str, address: &str, email: &str, password: &str) -> Self {
         let hashed = hash_password(password);
 
-        Self { 
-            name: String::from(name), 
-            address: String::from(address), 
-            email: String::from(email), 
-            user_type: UserType::Guest, 
+        Self {
+            name: String::from(name),
+            address: String::from(address),
+            email: String::from(email),
+            user_type: UserType::Guest,
             password_hash: hashed,
-            status: ActiveStatus::LoggedOut
-         }
+            status: ActiveStatus::LoggedOut,
+        }
     }
 }
-
-
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Account {
     user: User,
     account_number: String,
-    balance: f64
+    balance: f64,
 }
 
 impl Account {
-    fn new(user: &User, phone_no:&str) -> Self {
+    fn new(user: &User, phone_no: &str) -> Self {
         let acc_no = generate_account_number(phone_no);
 
-        Self { user: user.clone(), account_number: acc_no, balance: 0.0 }
+        Self {
+            user: user.clone(),
+            account_number: acc_no,
+            balance: 0.0,
+        }
     }
 }
 
@@ -98,74 +97,65 @@ struct Product {
     name: String,
     price: f64,
     stock: i32,
-    category: Category
+    category: Category,
 }
-
-
-
 
 impl Product {
-    fn new(name:&str, price: f64, stock:i32, category: Category) -> Self {
-        Self { 
-            name: String::from(name), 
-            price, 
-            stock, 
-            category
-         }
+    fn new(name: &str, price: f64, stock: i32, category: Category) -> Self {
+        Self {
+            name: String::from(name),
+            price,
+            stock,
+            category,
+        }
     }
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Cart {
     user: Account,
     product: Product,
     quantity: i32,
-    active: bool
+    active: bool,
 }
 
 impl Cart {
-    fn new(user: &Account, product: &Product, quantity:i32) -> Self {
-        Self { 
-            user: user.clone(), 
-            product: product.clone(), 
-            quantity: quantity, 
-            active: true
-         }
+    fn new(user: &Account, product: &Product, quantity: i32) -> Self {
+        Self {
+            user: user.clone(),
+            product: product.clone(),
+            quantity: quantity,
+            active: true,
+        }
     }
 }
-
-
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Order {
     user: Account,
     carts: Vec<Cart>,
     grand_total: f64,
-    status: OrderStatus
+    status: OrderStatus,
 }
 
 impl Order {
-    fn new(carts:Vec<Cart>, user:&Account) -> Self {
-        
-        let mut grand_total:f64 = 0.0;
-        
-        if !carts.is_empty(){
-            for cart in carts.iter(){
+    fn new(carts: Vec<Cart>, user: &Account) -> Self {
+        let mut grand_total: f64 = 0.0;
+
+        if !carts.is_empty() {
+            for cart in carts.iter() {
                 grand_total += (cart.quantity as f64 * cart.product.price)
             }
         }
 
-        Self { 
-            user: user.clone(), 
-            carts, 
-            grand_total, 
-            status: OrderStatus::Paid
-         }
+        Self {
+            user: user.clone(),
+            carts,
+            grand_total,
+            status: OrderStatus::Paid,
+        }
     }
 }
-
 
 fn main() {
     println!("INVENTORY SYSTEM");
@@ -176,8 +166,9 @@ fn main() {
 
     let mut logged_in_account: Option<Account> = None;
     loop {
-
-        println!("Options: \n1. Add Product\n2. View All Products\n3. View Single Product\n4. View All Cart\n5. View My Cart\n6. View All Orders\n7. View My Orders\n8. Create Account\n9. Change User Type\n10. Login\n11. Fund my Account\n12. Exit");
+        println!(
+            "Options: \n1. Add Product\n2. View All Products\n3. View Single Product\n4. View All Cart\n5. View My Cart\n6. View All Orders\n7. View My Orders\n8. Create Account\n9. Change User Type\n10. Login\n11. Fund my Account\n12. Exit"
+        );
 
         let input = user_input("Please Select an Option:");
 
@@ -220,7 +211,9 @@ fn main() {
                     }
                 };
 
-                println!("Select category:\n1. Food\n2. Electronics\n3. Fashion\n4. Grocery\n5. Computing");
+                println!(
+                    "Select category:\n1. Food\n2. Electronics\n3. Fashion\n4. Grocery\n5. Computing"
+                );
 
                 let cate = user_input("Select Category");
                 let category = match get_category(&cate) {
@@ -233,27 +226,22 @@ fn main() {
 
                 if active_account.user.user_type == UserType::Admin {
                     add_product(price, stock, &product_name, category, product_path);
-
-                }else {
+                } else {
                     println!("Only Admin can perform this action")
                 }
-
-                
-
-
-            },
+            }
 
             "2" => {
                 println!("\nAll Available Product:");
                 view_all_product(product_path);
-            },
+            }
 
             "3" => {
                 println!("\nAll Available Product:");
                 view_all_product(product_path);
 
                 let product_input = user_input("Select a Product:");
-                let serial:usize = match product_input.trim().parse() {
+                let serial: usize = match product_input.trim().parse() {
                     Ok(num) => num,
                     Err(_) => {
                         println!("Invalid Input");
@@ -269,14 +257,22 @@ fn main() {
                     }
                 };
 
-                product_output(&product, serial-1);
+                product_output(&product, serial - 1);
 
-
-                println!("Product Options:\n1. Restock Product\n2. Update Product\n3. Add to Cart\n4. Delete Product");
+                println!(
+                    "Product Options:\n1. Restock Product\n2. Update Product\n3. Add to Cart\n4. Delete Product"
+                );
                 let input = user_input("Select an Option:");
 
-                single_product_commands(input, serial, product, cart_path, product_path, &logged_in_account);
-            },
+                single_product_commands(
+                    input,
+                    serial,
+                    product,
+                    cart_path,
+                    product_path,
+                    &logged_in_account,
+                );
+            }
 
             "4" => {
                 let active_account = match verify_login(logged_in_account.clone()) {
@@ -289,10 +285,10 @@ fn main() {
 
                 if active_account.user.user_type == UserType::Admin {
                     view_all_cart(cart_path);
-                }else {
+                } else {
                     println!("Only Admin can perform this action")
                 }
-            },
+            }
 
             "5" => {
                 let active_account = match verify_login(logged_in_account.clone()) {
@@ -303,11 +299,11 @@ fn main() {
                     }
                 };
 
-                let mut carts:Vec<Cart> = match view_my_cart(cart_path, &active_account) {
+                let mut carts: Vec<Cart> = match view_my_cart(cart_path, &active_account) {
                     Ok(cart) => {
                         // println!("{:#?}", cart);
                         cart
-                    },
+                    }
                     Err(err) => {
                         println!("{}", err);
                         return;
@@ -317,27 +313,25 @@ fn main() {
                 println!("Cart Options:\n1. Order Now\n2. Delete Item\n3. Clear Cart");
                 let input = user_input("Select an Option:");
 
-
-                match input.trim(){
+                match input.trim() {
                     "1" => {
-                        // Placing Order 
+                        // Placing Order
                         order_now(&active_account, carts, acct_path, cart_path, order_path);
-                    },
+                    }
 
                     "2" => {
-                        // Deleting Item from my cart 
+                        // Deleting Item from my cart
                         delete_item_from_my_cart(&active_account, &mut carts, cart_path);
-                    },
+                    }
 
                     "3" => {
-                        // Clearing Cart 
+                        // Clearing Cart
                         clear_my_cart(&active_account, &mut carts, cart_path);
-                    },
+                    }
 
-
-                    _ => println!("Invalid Input")
+                    _ => println!("Invalid Input"),
                 }
-            },
+            }
 
             "6" => {
                 let active_account = match verify_login(logged_in_account.clone()) {
@@ -348,7 +342,6 @@ fn main() {
                     }
                 };
 
-
                 if active_account.user.user_type != UserType::Admin {
                     println!("Only Admin can perform this Action");
                     return;
@@ -356,10 +349,9 @@ fn main() {
 
                 view_all_order(order_path);
 
-                
                 let input = user_input("Select an Order to Update the Status");
 
-                let index:usize = match input.trim().parse(){
+                let index: usize = match input.trim().parse() {
                     Ok(num) => num,
                     Err(_) => {
                         println!("Invalid input");
@@ -368,10 +360,10 @@ fn main() {
                 };
 
                 update_order_status(order_path, index);
-            },
+            }
 
             "7" => {
-                // Viewing my orders 
+                // Viewing my orders
 
                 let active_account = match verify_login(logged_in_account.clone()) {
                     Ok(account) => account,
@@ -381,13 +373,13 @@ fn main() {
                     }
                 };
                 view_my_orders(order_path, &active_account);
-            },
+            }
 
             "8" => {
                 let full_name = user_input("Enter Full Name:");
                 let email = user_input("Enter Your Email:");
 
-                // Email validation 
+                // Email validation
                 if !validate_email(&email) {
                     println!("Invalid Email");
                     return;
@@ -395,11 +387,10 @@ fn main() {
 
                 let address = user_input("Enter your Full Address:");
 
-
                 let password = user_input("Enter Account Password");
 
-                // Password validation 
-                 match validate_password(&password) {
+                // Password validation
+                match validate_password(&password) {
                     Ok(pass) => pass,
                     Err(err) => {
                         println!("{}", err);
@@ -412,24 +403,25 @@ fn main() {
 
                 let phone_no = match check_phone_number(&phone_no) {
                     Ok(phone) => phone,
-                    Err(_) => {return;}
+                    Err(_) => {
+                        return;
+                    }
                 };
-                
+
                 create_account(&full_name, &email, &address, &password, &phone_no, path);
-                
-            },
+            }
 
             "9" => {
                 match change_user_type(&logged_in_account, acct_path) {
                     Ok(done) => {
                         println!("{}", done)
-                    },
+                    }
                     Err(err) => {
                         println!("{}", err);
                         return;
                     }
                 };
-            },
+            }
 
             "10" => {
                 println!("Account Login");
@@ -443,7 +435,7 @@ fn main() {
                 };
                 let password = user_input("Enter Password");
 
-                 logged_in_account = match login(&phone_no, &password, acct_path) {
+                logged_in_account = match login(&phone_no, &password, acct_path) {
                     Ok(acct) => Some(acct),
                     Err(err) => {
                         println!("{}", err);
@@ -452,10 +444,10 @@ fn main() {
                 };
 
                 // println!("Account acive: {:#?}", logged_in_account);
-            },
+            }
 
             "11" => {
-                // Funding Account codes 
+                // Funding Account codes
                 let active_account = match verify_login(logged_in_account.clone()) {
                     Ok(account) => account,
                     Err(err) => {
@@ -474,8 +466,7 @@ fn main() {
                 };
 
                 fund_my_account(&active_account, new_amount, acct_path);
-
-            },
+            }
 
             "12" => {
                 println!("Exiting.....");
@@ -489,15 +480,20 @@ fn main() {
     }
 }
 
-
-fn create_account(name:&str, email:&str, address:&str, password: &str, phone_no:&str, path:&str) {
-    
-    let mut db:Vec<Account> = match load_database(path) {
+fn create_account(
+    name: &str,
+    email: &str,
+    address: &str,
+    password: &str,
+    phone_no: &str,
+    path: &str,
+) {
+    let mut db: Vec<Account> = match load_database(path) {
         Ok(account) => account,
-        Err(_) => {return;}
+        Err(_) => {
+            return;
+        }
     };
-
-   
 
     for account in db.iter() {
         if account.account_number == generate_account_number(phone_no) {
@@ -513,19 +509,19 @@ fn create_account(name:&str, email:&str, address:&str, password: &str, phone_no:
 
     let saved: bool = match save_file(path, &db) {
         Ok(saved) => saved,
-        Err(_) => {return;}
+        Err(_) => {
+            return;
+        }
     };
 
-
-    if saved{
+    if saved {
         println!("Account Created Successfully!")
-    }else {
+    } else {
         println!("Account not Created Successfully!")
     }
 }
 
-
-fn login(phone_no: &str, password: &str, path:&str) -> Result<Account, String>{
+fn login(phone_no: &str, password: &str, path: &str) -> Result<Account, String> {
     let mut db: Vec<Account> = match load_database(path) {
         Ok(acct) => acct,
         Err(err) => {
@@ -543,14 +539,12 @@ fn login(phone_no: &str, password: &str, path:&str) -> Result<Account, String>{
                 return Ok(account.clone());
             }
         }
-    };
+    }
 
     Err("Invalid Phone Number or Passowrd".to_string())
-
 }
 
-
-fn add_product(price:f64, stock:i32, name:&str, category: Category, path:&str) {
+fn add_product(price: f64, stock: i32, name: &str, category: Category, path: &str) {
     let mut db: Vec<Product> = match load_database(path) {
         Ok(product) => product,
         Err(err) => {
@@ -558,7 +552,6 @@ fn add_product(price:f64, stock:i32, name:&str, category: Category, path:&str) {
             return;
         }
     };
-
 
     let new_product = Product::new(&name.to_string(), price, stock, category);
 
@@ -574,37 +567,29 @@ fn add_product(price:f64, stock:i32, name:&str, category: Category, path:&str) {
 
     if saved {
         println!("Product Added Successfully!")
-    }else {
+    } else {
         println!("Product not Added Successfully!")
     }
+}
 
-    
-}   
-
-
-fn view_product(path:&str, serial:usize) -> Result<Product, String> {
-    let db:Vec<Product> = match load_database(path) {
+fn view_product(path: &str, serial: usize) -> Result<Product, String> {
+    let db: Vec<Product> = match load_database(path) {
         Ok(product) => product,
         Err(err) => {
             return Err(err.to_string());
-            
         }
     };
 
-   
     println!("============================\nProduct Detials\n-----------------");
-    match db.get(serial-1) {
-        Some(product) => {
-            Ok(product.clone())
-        },
-        None => return Err("Product not Found!".to_string())
+    match db.get(serial - 1) {
+        Some(product) => Ok(product.clone()),
+        None => return Err("Product not Found!".to_string()),
     }
 
     // product_output(&db[serial-1], serial-1);
-    
 }
 
-fn update_product(index:usize, path:&str) {
+fn update_product(index: usize, path: &str) {
     let mut db: Vec<Product> = match load_database(path) {
         Ok(product) => product,
         Err(err) => {
@@ -613,48 +598,49 @@ fn update_product(index:usize, path:&str) {
         }
     };
 
-
-    match db.get_mut(index-1) {
+    match db.get_mut(index - 1) {
         Some(product) => {
             println!("Add Product:");
-                
-                let product_name = user_input("Enter Product Name:");
-                let price = user_input("Enter Price:");
 
-                let price = match check_price(&price) {
-                    Ok(num) => num,
-                    Err(err) => {
-                        println!("{}", err);
-                        return;
-                    }
-                };
+            let product_name = user_input("Enter Product Name:");
+            let price = user_input("Enter Price:");
 
-                let stock = user_input("Enter the number of Stocks:");
-                let stock = match check_stock(&stock) {
-                    Ok(num) => num,
-                    Err(err) => {
-                        println!("{}", err);
-                        return;
-                    }
-                };
+            let price = match check_price(&price) {
+                Ok(num) => num,
+                Err(err) => {
+                    println!("{}", err);
+                    return;
+                }
+            };
 
-                println!("Select category:\n1. Food\n2. Electronics\n3. Fashion\n4. Grocery\n5. Computing");
+            let stock = user_input("Enter the number of Stocks:");
+            let stock = match check_stock(&stock) {
+                Ok(num) => num,
+                Err(err) => {
+                    println!("{}", err);
+                    return;
+                }
+            };
 
-                let cate = user_input("Select Category");
-                let category = match get_category(&cate) {
-                    Some(cat) => cat,
-                    None => {
-                        println!("Invalid Category");
-                        return;
-                    }
-                };
+            println!(
+                "Select category:\n1. Food\n2. Electronics\n3. Fashion\n4. Grocery\n5. Computing"
+            );
 
-                product.name = product_name.to_string();
-                product.price = price;
-                product.stock = stock;
-                product.category = category
-        }, 
-        None => println!("Product not Found")
+            let cate = user_input("Select Category");
+            let category = match get_category(&cate) {
+                Some(cat) => cat,
+                None => {
+                    println!("Invalid Category");
+                    return;
+                }
+            };
+
+            product.name = product_name.to_string();
+            product.price = price;
+            product.stock = stock;
+            product.category = category
+        }
+        None => println!("Product not Found"),
     }
 
     let saved = match save_file(path, &db) {
@@ -667,15 +653,13 @@ fn update_product(index:usize, path:&str) {
 
     if saved {
         println!("Product Updated Successfully!")
-    }else {
+    } else {
         println!("Product not Updated Successfully!")
     }
-
 }
 
-
-fn view_all_product(path:&str){
-    let db:Vec<Product> = match load_database(path) {
+fn view_all_product(path: &str) {
+    let db: Vec<Product> = match load_database(path) {
         Ok(product) => product,
         Err(err) => {
             println!("{}", err);
@@ -683,18 +667,17 @@ fn view_all_product(path:&str){
         }
     };
 
-    if db.is_empty(){
+    if db.is_empty() {
         println!("There is no Available Product");
         return;
     }
 
-    for (no, product) in db.iter().enumerate(){
-        
+    for (no, product) in db.iter().enumerate() {
         product_output(product, no);
     }
 }
 
-fn restock(stock:&str, serial_no:usize, path:&str) {
+fn restock(stock: &str, serial_no: usize, path: &str) {
     let mut db: Vec<Product> = match load_database(path) {
         Ok(prod) => prod,
         Err(err) => {
@@ -711,14 +694,12 @@ fn restock(stock:&str, serial_no:usize, path:&str) {
         }
     };
 
-    match db.get_mut(serial_no-1) {
+    match db.get_mut(serial_no - 1) {
         Some(product) => {
             product.stock += new_stock;
-            
-        },
-        None => println!("Product not Found!")
+        }
+        None => println!("Product not Found!"),
     }
-
 
     let saved = match save_file(path, &db) {
         Ok(done) => done,
@@ -727,16 +708,19 @@ fn restock(stock:&str, serial_no:usize, path:&str) {
             return;
         }
     };
-    
+
     if saved {
-        println!("{} Product Restocked Successfully", db[serial_no-1].name)
-    }else {
-        println!("{} Product Restocked not Successfully", db[serial_no-1].name)
+        println!("{} Product Restocked Successfully", db[serial_no - 1].name)
+    } else {
+        println!(
+            "{} Product Restocked not Successfully",
+            db[serial_no - 1].name
+        )
     }
 }
 
-fn add_to_cart(user: &Account, quantity:i32, product:&Product, path:&str) {
-    let mut cart_db: Vec<Cart> = match  load_database(path) {
+fn add_to_cart(user: &Account, quantity: i32, product: &Product, path: &str) {
+    let mut cart_db: Vec<Cart> = match load_database(path) {
         Ok(cart) => cart,
         Err(err) => {
             println!("{}", err);
@@ -749,7 +733,7 @@ fn add_to_cart(user: &Account, quantity:i32, product:&Product, path:&str) {
         cart_db.push(cart);
 
         let saved = match save_file(path, &cart_db) {
-            Ok(done) => done, 
+            Ok(done) => done,
             Err(err) => {
                 println!("{}", err);
                 return;
@@ -758,23 +742,19 @@ fn add_to_cart(user: &Account, quantity:i32, product:&Product, path:&str) {
 
         if saved {
             println!("Product Successfully Added to the Cart")
-        }else {
+        } else {
             println!("Product Not Added to the Cart")
         }
-    }else {
+    } else {
         println!("Product Out of Stock")
     }
-
-
-    
 }
 
-
-fn change_user_type(account:&Option<Account>, path:&str) -> Result<String, String> {
+fn change_user_type(account: &Option<Account>, path: &str) -> Result<String, String> {
     let active_account = match verify_login(account.clone()) {
         Ok(account) => account,
         Err(err) => {
-            return Err(err.to_string());            
+            return Err(err.to_string());
         }
     };
 
@@ -787,35 +767,31 @@ fn change_user_type(account:&Option<Account>, path:&str) -> Result<String, Strin
         };
 
         for (index, account) in account_db.iter().enumerate() {
-            println!("User Accounts:\n{}. Full_name: {}\nEmail: {}\nUser Type: {}\nAccount Number: {}\n---------------------",
-            index+1, 
-            account.user.name.trim(),
-            account.user.email.trim(),
-            match account.user.user_type {
-                UserType::Admin => "Admin",
-                UserType::Guest => "Guest"
-            },
-            account.account_number
-        )
-
-        
+            println!(
+                "User Accounts:\n{}. Full_name: {}\nEmail: {}\nUser Type: {}\nAccount Number: {}\n---------------------",
+                index + 1,
+                account.user.name.trim(),
+                account.user.email.trim(),
+                match account.user.user_type {
+                    UserType::Admin => "Admin",
+                    UserType::Guest => "Guest",
+                },
+                account.account_number
+            )
         }
 
         let choosen_acct = user_input("Select a User:");
 
-        let user_index:usize = match choosen_acct.trim().parse() {
+        let user_index: usize = match choosen_acct.trim().parse() {
             Ok(index) => index,
             Err(err) => {
                 return Err("Invalid Input for the User Account".to_string());
-                
             }
         };
 
-        match account_db.get_mut(user_index-1) {
-            Some(acct) => {
-                acct.user.user_type = UserType::Admin
-            },
-            None => return Err("User Not Find".to_string())
+        match account_db.get_mut(user_index - 1) {
+            Some(acct) => acct.user.user_type = UserType::Admin,
+            None => return Err("User Not Find".to_string()),
         }
 
         let saved = match save_file(path, &account_db) {
@@ -827,18 +803,16 @@ fn change_user_type(account:&Option<Account>, path:&str) -> Result<String, Strin
 
         if saved {
             Ok("Account User Type Changed Successfully!".to_string())
-        }else {
+        } else {
             Err("Change of User Type not Successful\n".to_string())
         }
-    }else {
-        return Err("Only Authorized User can perform this action!".to_string())
+    } else {
+        return Err("Only Authorized User can perform this action!".to_string());
     }
-    
 }
 
-
-fn delete_product(path:&str, serial:usize) {
-    let mut prod_db:Vec<Product> = match load_database(path) {
+fn delete_product(path: &str, serial: usize) {
+    let mut prod_db: Vec<Product> = match load_database(path) {
         Ok(product) => product,
         Err(err) => {
             println!("{}", err);
@@ -846,15 +820,14 @@ fn delete_product(path:&str, serial:usize) {
         }
     };
 
-    match prod_db.get_mut(serial-1) {
+    match prod_db.get_mut(serial - 1) {
         Some(prod) => {
-            prod_db.remove(serial-1);
-        },
-        None => println!("Product not Found!")
+            prod_db.remove(serial - 1);
+        }
+        None => println!("Product not Found!"),
     }
 
-
-    let saved = match  save_file(path, &prod_db) {
+    let saved = match save_file(path, &prod_db) {
         Ok(done) => done,
         Err(err) => {
             println!("{}", err);
@@ -862,16 +835,14 @@ fn delete_product(path:&str, serial:usize) {
         }
     };
 
-    if saved{
+    if saved {
         println!("Product deleted Successfully")
-    }else {
+    } else {
         println!("Product not deleted Successfully")
     }
-
 }
 
-
-fn view_all_cart(path:&str) {
+fn view_all_cart(path: &str) {
     let cart_db: Vec<Cart> = match load_database(path) {
         Ok(cart) => cart,
         Err(err) => {
@@ -880,49 +851,45 @@ fn view_all_cart(path:&str) {
         }
     };
 
-
-    if !cart_db.is_empty(){
+    if !cart_db.is_empty() {
         println!("All Available Carts");
         for (index, cart) in cart_db.iter().enumerate() {
             cart_output(index, cart);
         }
-    }else {
+    } else {
         println!("There is no Available Cart")
     }
 }
 
-
-fn view_my_cart(path:&str, account:&Account)-> Result<Vec<Cart>, String> {
-    let cart_db:Vec<Cart> = match load_database(path) {
+fn view_my_cart(path: &str, account: &Account) -> Result<Vec<Cart>, String> {
+    let cart_db: Vec<Cart> = match load_database(path) {
         Ok(cart) => cart,
         Err(err) => {
             return Err(err);
         }
     };
 
-    let mut carts:Vec<Cart> = Vec::new();
+    let mut carts: Vec<Cart> = Vec::new();
 
-    if !cart_db.is_empty(){
+    if !cart_db.is_empty() {
         for (index, my_cart) in cart_db.iter().enumerate() {
             if my_cart.user.account_number == account.account_number && my_cart.active {
                 carts.push(my_cart.clone());
             }
         }
-    }else {
+    } else {
         return Err("Your Cart is Empty!".to_string());
-        
     }
 
-    for (index, cart) in carts.iter().enumerate(){
+    for (index, cart) in carts.iter().enumerate() {
         cart_output(index, cart)
     }
 
     Ok(carts)
 }
 
-
-fn fund_my_account(account:&Account, amount:f64, path:&str){
-    let mut acct_db:Vec<Account> = match load_database(path) {
+fn fund_my_account(account: &Account, amount: f64, path: &str) {
+    let mut acct_db: Vec<Account> = match load_database(path) {
         Ok(account) => account,
         Err(err) => {
             println!("{}", err);
@@ -930,7 +897,10 @@ fn fund_my_account(account:&Account, amount:f64, path:&str){
         }
     };
 
-    let acct_index:usize = match acct_db.iter().position(|c| c.account_number == account.account_number) {
+    let acct_index: usize = match acct_db
+        .iter()
+        .position(|c| c.account_number == account.account_number)
+    {
         Some(index) => index,
         None => {
             println!("Account not Found!");
@@ -938,27 +908,27 @@ fn fund_my_account(account:&Account, amount:f64, path:&str){
         }
     };
 
-
-    
-
     acct_db[acct_index].balance += amount;
 
     match save_file(path, &acct_db) {
         Ok(done) => {
             println!("Account funded Successfully");
-        },
+        }
         Err(err) => {
             println!("{err}");
             return;
         }
     };
-
-
 }
 
-
-fn order_now(account:&Account, carts:Vec<Cart>, acct_path:&str, cart_path: &str, order_path:&str){
-    let mut cart_db:Vec<Cart> = match load_database(cart_path) {
+fn order_now(
+    account: &Account,
+    carts: Vec<Cart>,
+    acct_path: &str,
+    cart_path: &str,
+    order_path: &str,
+) {
+    let mut cart_db: Vec<Cart> = match load_database(cart_path) {
         Ok(cart) => cart,
         Err(err) => {
             println!("{}", err);
@@ -966,7 +936,7 @@ fn order_now(account:&Account, carts:Vec<Cart>, acct_path:&str, cart_path: &str,
         }
     };
 
-    let mut account_db:Vec<Account> = match load_database(acct_path) {
+    let mut account_db: Vec<Account> = match load_database(acct_path) {
         Ok(acct) => acct,
         Err(err) => {
             println!("{}", err);
@@ -974,15 +944,18 @@ fn order_now(account:&Account, carts:Vec<Cart>, acct_path:&str, cart_path: &str,
         }
     };
 
-    let mut acct_index = match account_db.iter().position(|a|a.account_number == account.account_number) {
+    let mut acct_index = match account_db
+        .iter()
+        .position(|a| a.account_number == account.account_number)
+    {
         Some(index) => index,
-        None=> {
+        None => {
             println!("Account not Found!");
             return;
         }
     };
 
-    let mut order_db:Vec<Order> = match load_database(order_path){
+    let mut order_db: Vec<Order> = match load_database(order_path) {
         Ok(order) => order,
         Err(err) => {
             println!("{}", err);
@@ -992,7 +965,7 @@ fn order_now(account:&Account, carts:Vec<Cart>, acct_path:&str, cart_path: &str,
 
     let new_order = Order::new(carts, account);
     let total = &new_order.grand_total;
-    
+
     if account_db[acct_index].balance < new_order.grand_total {
         println!("Insufficient Funds to complete the Order");
         return;
@@ -1018,10 +991,8 @@ fn order_now(account:&Account, carts:Vec<Cart>, acct_path:&str, cart_path: &str,
             }
 
             match account_db.get_mut(acct_index) {
-                Some(acct) => {
-                    acct.balance -= total
-                },
-                _ => println!("Not Executed")
+                Some(acct) => acct.balance -= total,
+                _ => println!("Not Executed"),
             }
 
             // save updated cart database
@@ -1034,7 +1005,7 @@ fn order_now(account:&Account, carts:Vec<Cart>, acct_path:&str, cart_path: &str,
             }
 
             println!("Ordered Successfully!")
-    },
+        }
         Err(err) => {
             println!("{}", err);
             return;
@@ -1042,8 +1013,7 @@ fn order_now(account:&Account, carts:Vec<Cart>, acct_path:&str, cart_path: &str,
     }
 }
 
-
-fn delete_item_from_my_cart(account:&Account, carts:&mut Vec<Cart>, cart_path: &str) {
+fn delete_item_from_my_cart(account: &Account, carts: &mut Vec<Cart>, cart_path: &str) {
     let mut cart_db: Vec<Cart> = match load_database(cart_path) {
         Ok(cart) => cart,
         Err(err) => {
@@ -1052,14 +1022,14 @@ fn delete_item_from_my_cart(account:&Account, carts:&mut Vec<Cart>, cart_path: &
         }
     };
 
-    let mut dindex:usize = 0;
+    let mut dindex: usize = 0;
 
-    for (index, cart) in carts.iter().enumerate(){
+    for (index, cart) in carts.iter().enumerate() {
         cart_output(index, cart);
     }
 
     let input = user_input("Select an Item to delete:");
-    let index:usize = match input.trim().parse() {
+    let index: usize = match input.trim().parse() {
         Ok(num) => num,
         Err(err) => {
             println!("Invalid Input");
@@ -1067,23 +1037,22 @@ fn delete_item_from_my_cart(account:&Account, carts:&mut Vec<Cart>, cart_path: &
         }
     };
 
-    match carts.get_mut(index-1){
+    match carts.get_mut(index - 1) {
         Some(my_cart) => {
-            dindex = match cart_db.iter().position(
-                |c| 
-                (c.user.account_number == account.account_number) && 
-                (c.user.account_number == my_cart.user.account_number) &&
-                (c.quantity == my_cart.quantity) &&
-                (c.product.price == my_cart.product.price) 
-            )  {
+            dindex = match cart_db.iter().position(|c| {
+                (c.user.account_number == account.account_number)
+                    && (c.user.account_number == my_cart.user.account_number)
+                    && (c.quantity == my_cart.quantity)
+                    && (c.product.price == my_cart.product.price)
+            }) {
                 Some(index) => index,
                 None => {
                     println!("Cart Item not Found!");
                     return;
                 }
             };
-        },
-        None => println!("")
+        }
+        None => println!(""),
     }
 
     match cart_db.get_mut(dindex) {
@@ -1092,16 +1061,15 @@ fn delete_item_from_my_cart(account:&Account, carts:&mut Vec<Cart>, cart_path: &
 
             match save_file(cart_path, &cart_db) {
                 Ok(done) => println!("Item removed Successfully"),
-                Err(err) => println!("Item Not Removed!")
+                Err(err) => println!("Item Not Removed!"),
             }
-        },
-        None => println!("Item not found!")
+        }
+        None => println!("Item not found!"),
     }
 }
 
-
-fn clear_my_cart(account:&Account, carts:&mut Vec<Cart>, cart_path: &str) {
-    let mut cart_db:Vec<Cart> = match load_database(cart_path)  {
+fn clear_my_cart(account: &Account, carts: &mut Vec<Cart>, cart_path: &str) {
+    let mut cart_db: Vec<Cart> = match load_database(cart_path) {
         Ok(cart) => cart,
         Err(err) => {
             println!("{}", err);
@@ -1109,38 +1077,34 @@ fn clear_my_cart(account:&Account, carts:&mut Vec<Cart>, cart_path: &str) {
         }
     };
 
-    if carts.is_empty(){
+    if carts.is_empty() {
         println!("You have no Item in your cart");
         return;
     }
 
-    for my_cart in carts.iter_mut(){
-        let index = match cart_db.iter().position(
-                |c|
-                (c.user.account_number == account.account_number) && 
-                (c.user.account_number == my_cart.user.account_number) &&
-                (c.quantity == my_cart.quantity) &&
-                (c.product.price == my_cart.product.price)
-            ) {
-                Some(index) => index,
-                None => {
-                    println!("Item not found");
-                    return;
-                }
-                
-            };
+    for my_cart in carts.iter_mut() {
+        let index = match cart_db.iter().position(|c| {
+            (c.user.account_number == account.account_number)
+                && (c.user.account_number == my_cart.user.account_number)
+                && (c.quantity == my_cart.quantity)
+                && (c.product.price == my_cart.product.price)
+        }) {
+            Some(index) => index,
+            None => {
+                println!("Item not found");
+                return;
+            }
+        };
         match cart_db.get_mut(index) {
             Some(cart) => {
                 cart_db.remove(index);
-            },
+            }
             None => {
                 println!("Cart Not Cleared");
                 return;
-            }    
+            }
         }
-        
     }
-
 
     let saved = match save_file(cart_path, &cart_db) {
         Ok(done) => done,
@@ -1150,13 +1114,12 @@ fn clear_my_cart(account:&Account, carts:&mut Vec<Cart>, cart_path: &str) {
         }
     };
 
-    if saved{
+    if saved {
         println!("Cart cleared Successfully")
     }
 }
 
-
-fn view_all_order(path:&str) {
+fn view_all_order(path: &str) {
     let order_db: Vec<Order> = match load_database(path) {
         Ok(cart) => cart,
         Err(err) => {
@@ -1165,27 +1128,24 @@ fn view_all_order(path:&str) {
         }
     };
 
-
-    if !order_db.is_empty(){
+    if !order_db.is_empty() {
         println!("All Available Order(s)");
         for (index, order) in order_db.iter().enumerate() {
             order_output(index, order);
         }
-    }else {
+    } else {
         println!("There is no Available Order")
     }
 }
 
-
-fn update_order_status(path:&str, index:usize){
-    let mut order_db:Vec<Order> = match load_database(path) {
+fn update_order_status(path: &str, index: usize) {
+    let mut order_db: Vec<Order> = match load_database(path) {
         Ok(order) => order,
         Err(err) => {
             println!("{}", err);
             return;
         }
     };
-
 
     println!("Options: \n1. Processing\n2. Shipped\n3. Delivered\n4. Cancelled");
     let input = user_input("Select an Option:");
@@ -1198,20 +1158,19 @@ fn update_order_status(path:&str, index:usize){
         }
     };
 
-    match order_db.get_mut(index -1) {
+    match order_db.get_mut(index - 1) {
         Some(order) => {
             order.status = new_status;
 
             match save_file(path, &order_db) {
                 Ok(done) => {
                     println!("Order Updated Successfully");
-                    
-                },
+                }
                 Err(err) => {
                     println!("{}", err)
                 }
             }
-        },
+        }
         None => {
             println!("Invalid Selection of Order");
             return;
@@ -1219,9 +1178,8 @@ fn update_order_status(path:&str, index:usize){
     }
 }
 
-
-fn view_my_orders(path:&str, account:&Account){
-    let mut order_db:Vec<Order> = match load_database(path) {
+fn view_my_orders(path: &str, account: &Account) {
+    let mut order_db: Vec<Order> = match load_database(path) {
         Ok(order) => order,
         Err(err) => {
             println!("{}", err);
@@ -1229,21 +1187,17 @@ fn view_my_orders(path:&str, account:&Account){
         }
     };
 
-
-    for (index, order) in order_db.iter().enumerate(){
+    for (index, order) in order_db.iter().enumerate() {
         order_output(index, order);
     }
 
     let input = user_input("Select an Order to Check Status:");
 
     view_my_single_order(&input, path)
-    
 }
 
-
-fn view_my_single_order(input: &str, path:&str){
-
-    let order_db:Vec<Order> = match load_database(path) {
+fn view_my_single_order(input: &str, path: &str) {
+    let order_db: Vec<Order> = match load_database(path) {
         Ok(order) => order,
         Err(err) => {
             println!("{}", err);
@@ -1251,7 +1205,7 @@ fn view_my_single_order(input: &str, path:&str){
         }
     };
 
-    let index:usize = match input.trim().parse() {
+    let index: usize = match input.trim().parse() {
         Ok(num) => num,
         Err(err) => {
             println!("Invalid Input Selection");
@@ -1259,93 +1213,69 @@ fn view_my_single_order(input: &str, path:&str){
         }
     };
 
-    match order_db.get(index-1) {
+    match order_db.get(index - 1) {
         Some(order) => {
-            
             order_output(index, order);
-        },
-        None => {println!("Order not found!")}
+        }
+        None => {
+            println!("Order not found!")
+        }
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-fn order_output(index:usize, order:&Order){
+fn order_output(index: usize, order: &Order) {
     println!(
-            "----------------------\n{}. User Name: {}    -    User Email: {}\nOrders: {:#?}\nOrder Status: {:?}   -   Grand Total: N{:.2}\n",
-            index +1,
-            order.user.user.name.trim().to_uppercase(),
-            order.user.user.email.trim().to_lowercase(),
-            order.carts,
-            order.status,
-            order.grand_total
-            
-        )
+        "----------------------\n{}. User Name: {}    -    User Email: {}\nOrders: {:#?}\nOrder Status: {:?}   -   Grand Total: N{:.2}\n",
+        index + 1,
+        order.user.user.name.trim().to_uppercase(),
+        order.user.user.email.trim().to_lowercase(),
+        order.carts,
+        order.status,
+        order.grand_total
+    )
 }
 
-
-
-fn cart_output(index:usize, cart:&Cart){
+fn cart_output(index: usize, cart: &Cart) {
     println!(
-            "----------------------\n{}. User Name: {}    -    User Email: {}\nProduct Name: {}  -  Product Price: N{:.2}\nQuantity: {}   -   Total: N{:.2}\n",
-            index +1,
-            cart.user.user.name.trim().to_uppercase(),
-            cart.user.user.email.trim().to_lowercase(),
-            cart.product.name.trim(),
-            cart.product.price,
-            cart.quantity,
-            cart.quantity as f64 * cart.product.price
-        )
+        "----------------------\n{}. User Name: {}    -    User Email: {}\nProduct Name: {}  -  Product Price: N{:.2}\nQuantity: {}   -   Total: N{:.2}\n",
+        index + 1,
+        cart.user.user.name.trim().to_uppercase(),
+        cart.user.user.email.trim().to_lowercase(),
+        cart.product.name.trim(),
+        cart.product.price,
+        cart.quantity,
+        cart.quantity as f64 * cart.product.price
+    )
 }
-
 
 fn hash_password(password: &str) -> String {
+    let salt = SaltString::generate(OsRng);
 
-    
-        let salt = SaltString::generate(OsRng);
-
-        Argon2::default()
+    Argon2::default()
         .hash_password(password.as_bytes(), &salt)
         .unwrap()
         .to_string()
-        
 }
 
-
-fn verify_password(password: &str, hash:&str) -> bool {
-
+fn verify_password(password: &str, hash: &str) -> bool {
     let parsed_hash = match PasswordHash::new(hash) {
         Ok(hash) => hash,
-        Err(_) => return false
+        Err(_) => return false,
     };
 
-
     Argon2::default()
-    .verify_password(password.as_bytes(), &parsed_hash)
-    .is_ok()
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_ok()
 }
 
-
-fn generate_account_number(phone_no:&str) -> String {
-    let number = phone_no.len()-10;
+fn generate_account_number(phone_no: &str) -> String {
+    let number = phone_no.len() - 10;
     let new_number = &phone_no[number..];
     String::from(new_number)
 }
 
-
-fn check_phone_number(phone_no:&str) -> Result<String, String> {
-     let phone_no = phone_no.trim();
+fn check_phone_number(phone_no: &str) -> Result<String, String> {
+    let phone_no = phone_no.trim();
 
     if !phone_no.chars().all(|c| c.is_ascii_digit()) {
         return Err("Phone number should contain only digits".to_string());
@@ -1359,10 +1289,7 @@ fn check_phone_number(phone_no:&str) -> Result<String, String> {
         return Err("Phone number must be 11 digits".to_string());
     }
 
-
-
     Ok(phone_no.to_string())
-
 }
 
 fn user_input(option: &str) -> String {
@@ -1371,12 +1298,10 @@ fn user_input(option: &str) -> String {
     let mut input = String::new();
     io::stdin().read_line(&mut input).expect("No Input Found!");
 
-
     input
 }
 
-
-fn load_database<T: serde::de::DeserializeOwned> (path:&str) -> Result<Vec<T>, String> {
+fn load_database<T: serde::de::DeserializeOwned>(path: &str) -> Result<Vec<T>, String> {
     let file = match File::open(path) {
         Ok(file) => file,
         Err(err) => {
@@ -1396,11 +1321,9 @@ fn load_database<T: serde::de::DeserializeOwned> (path:&str) -> Result<Vec<T>, S
     };
 
     Ok(account)
-
-
 }
 
-fn save_file<T: Serialize>(path:&str, database: &Vec<T> ) -> Result<bool, String> {
+fn save_file<T: Serialize>(path: &str, database: &Vec<T>) -> Result<bool, String> {
     let file = match File::create(path) {
         Ok(file) => file,
         Err(err) => {
@@ -1409,32 +1332,23 @@ fn save_file<T: Serialize>(path:&str, database: &Vec<T> ) -> Result<bool, String
         }
     };
 
-
     let writer = BufWriter::new(file);
 
     match serde_json::to_writer_pretty(writer, &database) {
         Ok(b) => Ok(true),
-        Err(_) => Err("File not saved!".to_string())
-
+        Err(_) => Err("File not saved!".to_string()),
     }
 }
-
 
 // fn validate_email(email:&str) -> bool {
 //     email.validate_email()
 // }
 
-
 fn validate_email(email: &str) -> bool {
     let email = email.trim();
 
-    email.contains('@')
-        && email.contains('.')
-        && !email.starts_with('@')
-        && !email.ends_with('@')
+    email.contains('@') && email.contains('.') && !email.starts_with('@') && !email.ends_with('@')
 }
-
-
 
 fn validate_password(password: &str) -> Result<(), String> {
     if password.len() < 8 {
@@ -1456,25 +1370,18 @@ fn validate_password(password: &str) -> Result<(), String> {
     Ok(())
 }
 
-
-
-fn verify_login(account:Option<Account>) -> Result<Account, String> {
+fn verify_login(account: Option<Account>) -> Result<Account, String> {
     match account {
-        Some(ref account) => {
-            match account.user.status {
-                ActiveStatus::LoggedIn => {
-                    Ok(account.clone())
-                }, 
-                ActiveStatus::LoggedOut => Err("Please Login to Access this Page".to_string())
-            }
+        Some(ref account) => match account.user.status {
+            ActiveStatus::LoggedIn => Ok(account.clone()),
+            ActiveStatus::LoggedOut => Err("Please Login to Access this Page".to_string()),
         },
-        None => Err("You can't Access This Page because you are not logged in".to_string())
+        None => Err("You can't Access This Page because you are not logged in".to_string()),
     }
 }
 
-
-fn check_price(price:&str) -> Result<f64, String> {
-    let price:f64 = match price.trim().parse() {
+fn check_price(price: &str) -> Result<f64, String> {
+    let price: f64 = match price.trim().parse() {
         Ok(num) => num,
         Err(err) => {
             return Err("Only Digits is accepted for price".to_string());
@@ -1488,9 +1395,8 @@ fn check_price(price:&str) -> Result<f64, String> {
     Ok(price)
 }
 
-
-fn check_stock(stock:&str) -> Result<i32, String> {
-    let stock:i32 = match stock.trim().parse() {
+fn check_stock(stock: &str) -> Result<i32, String> {
+    let stock: i32 = match stock.trim().parse() {
         Ok(num) => num,
         Err(err) => {
             return Err("Only Digits is accepted".to_string());
@@ -1510,76 +1416,85 @@ fn get_order_status(input: &str) -> Option<OrderStatus> {
         "2" => Some(OrderStatus::Shipped),
         "3" => Some(OrderStatus::Delivered),
         "4" => Some(OrderStatus::Cancelled),
-        _ => None
+        _ => None,
     }
 }
 
-
-fn get_category(input:&str) -> Option<Category> {
+fn get_category(input: &str) -> Option<Category> {
     match input.trim().to_lowercase().as_str() {
         "1" => Some(Category::Food),
         "2" => Some(Category::Electronics),
         "3" => Some(Category::Fashion),
-        "5" => Some(Category::Computing), 
+        "5" => Some(Category::Computing),
         "4" => Some(Category::Grocery),
-        _ =>  None
+        _ => None,
     }
 }
 
-
-fn product_output(product:&Product, serial_no:usize) {
-    println!("{}.\nName: {}\nPrice: {}\nStock: {}\nCategory: {:?}\n", serial_no+1, product.name.trim(), product.price, product.stock, product.category);
+fn product_output(product: &Product, serial_no: usize) {
+    println!(
+        "{}.\nName: {}\nPrice: {}\nStock: {}\nCategory: {:?}\n",
+        serial_no + 1,
+        product.name.trim(),
+        product.price,
+        product.stock,
+        product.category
+    );
 }
 
-
-fn single_product_commands(input: String, serial:usize, product: Product, cart_path: &str, product_path:&str, logged_in_account: &Option<Account>, ){
+fn single_product_commands(
+    input: String,
+    serial: usize,
+    product: Product,
+    cart_path: &str,
+    product_path: &str,
+    logged_in_account: &Option<Account>,
+) {
     match input.trim() {
         "1" => {
             let active_account = match verify_login(logged_in_account.clone()) {
-                    Ok(account) => account,
-                    Err(err) => {
-                        println!("{}", err);
-                        return;
-                    }
-                };
+                Ok(account) => account,
+                Err(err) => {
+                    println!("{}", err);
+                    return;
+                }
+            };
 
-            
             if active_account.user.user_type == UserType::Admin {
                 let stock = &user_input("Enter the number of Stocks:");
                 restock(stock, serial, product_path);
-            }else {
+            } else {
                 println!("Only Admin can restock a product");
                 // return;
             }
-        },
+        }
 
         "2" => {
             let active_account = match verify_login(logged_in_account.clone()) {
-                    Ok(account) => account,
-                    Err(err) => {
-                        println!("{}", err);
-                        return;
-                    }
-                };
+                Ok(account) => account,
+                Err(err) => {
+                    println!("{}", err);
+                    return;
+                }
+            };
 
-            
             if active_account.user.user_type == UserType::Admin {
                 update_product(serial, product_path);
-            }else {
+            } else {
                 println!("Only Admin has the Permission to Perform the action")
             }
-        },
+        }
 
         "3" => {
             let active_account = match verify_login(logged_in_account.clone()) {
-                    Ok(account) => account,
-                    Err(err) => {
-                        println!("{}", err);
-                        return;
-                    }
-                };
+                Ok(account) => account,
+                Err(err) => {
+                    println!("{}", err);
+                    return;
+                }
+            };
 
-            let mut cart_db:Vec<Cart> = match load_database(cart_path) {
+            let mut cart_db: Vec<Cart> = match load_database(cart_path) {
                 Ok(cart) => cart,
                 Err(err) => {
                     println!("{}", err);
@@ -1596,15 +1511,18 @@ fn single_product_commands(input: String, serial:usize, product: Product, cart_p
                 }
             };
 
-
-            if let Some(prod) = cart_db.iter_mut().find(|cart_product| cart_product.user.account_number == active_account.account_number && cart_product.product.name.trim().to_lowercase() == product.name.trim().to_lowercase()) {
+            if let Some(prod) = cart_db.iter_mut().find(|cart_product| {
+                cart_product.user.account_number == active_account.account_number
+                    && cart_product.product.name.trim().to_lowercase()
+                        == product.name.trim().to_lowercase()
+            }) {
                 if quantity > product.stock {
                     println!("The requesting quantity is more than the Available stock")
-                }else {
+                } else {
                     prod.quantity += quantity;
                 }
 
-            match save_file(cart_path, &cart_db) {
+                match save_file(cart_path, &cart_db) {
                     Ok(done) => done,
                     Err(err) => {
                         println!("{}", err);
@@ -1615,26 +1533,24 @@ fn single_product_commands(input: String, serial:usize, product: Product, cart_p
                 // println!("Not increased")
                 add_to_cart(&active_account, quantity, &product, cart_path);
             }
-        
-        
-        },
+        }
 
         "4" => {
             let active_account = match verify_login(logged_in_account.clone()) {
-                    Ok(account) => account,
-                    Err(err) => {
-                        println!("{}", err);
-                        return;
-                    }
-                };
+                Ok(account) => account,
+                Err(err) => {
+                    println!("{}", err);
+                    return;
+                }
+            };
 
             if active_account.user.user_type == UserType::Admin {
                 delete_product(product_path, serial);
-            }else {
+            } else {
                 println!("Only Admin has the Permission to Perform the action")
             }
         }
 
-        _ => println!("Invalid Input for Product Actions")
+        _ => println!("Invalid Input for Product Actions"),
     }
 }
