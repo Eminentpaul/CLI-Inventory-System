@@ -325,12 +325,62 @@ fn main() {
                     },
 
                     "2" => {
+                        // Deleting Item from my cart 
                         delete_item_from_my_cart(&active_account, &mut carts, cart_path);
-                    }
+                    },
+
+                    "3" => {
+                        // Clearing Cart 
+                        clear_my_cart(&active_account, &mut carts, cart_path);
+                    },
 
 
                     _ => println!("Invalid Input")
                 }
+            },
+
+            "6" => {
+                let active_account = match verify_login(logged_in_account.clone()) {
+                    Ok(account) => account,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+
+                if active_account.user.user_type != UserType::Admin {
+                    println!("Only Admin can perform this Action");
+                    return;
+                }
+
+                view_all_order(order_path);
+
+                
+                let input = user_input("Select an Order to Update the Status");
+
+                let index:usize = match input.trim().parse(){
+                    Ok(num) => num,
+                    Err(_) => {
+                        println!("Invalid input");
+                        return;
+                    }
+                };
+
+                update_order_status(order_path, index);
+            },
+
+            "7" => {
+                // Viewing my orders 
+
+                let active_account = match verify_login(logged_in_account.clone()) {
+                    Ok(account) => account,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+                view_my_orders(order_path, &active_account);
             },
 
             "8" => {
@@ -1050,7 +1100,7 @@ fn delete_item_from_my_cart(account:&Account, carts:&mut Vec<Cart>, cart_path: &
 }
 
 
-fn clear_my(account:&Account, carts:&mut Vec<Cart>, cart_path: &str) {
+fn clear_my_cart(account:&Account, carts:&mut Vec<Cart>, cart_path: &str) {
     let mut cart_db:Vec<Cart> = match load_database(cart_path)  {
         Ok(cart) => cart,
         Err(err) => {
@@ -1059,13 +1109,164 @@ fn clear_my(account:&Account, carts:&mut Vec<Cart>, cart_path: &str) {
         }
     };
 
+    if carts.is_empty(){
+        println!("You have no Item in your cart");
+        return;
+    }
+
     for my_cart in carts.iter_mut(){
+        let index = match cart_db.iter().position(
+                |c|
+                (c.user.account_number == account.account_number) && 
+                (c.user.account_number == my_cart.user.account_number) &&
+                (c.quantity == my_cart.quantity) &&
+                (c.product.price == my_cart.product.price)
+            ) {
+                Some(index) => index,
+                None => {
+                    println!("Item not found");
+                    return;
+                }
+                
+            };
+        match cart_db.get_mut(index) {
+            Some(cart) => {
+                cart_db.remove(index);
+            },
+            None => {
+                println!("Cart Not Cleared");
+                return;
+            }    
+        }
         
+    }
+
+
+    let saved = match save_file(cart_path, &cart_db) {
+        Ok(done) => done,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    if saved{
+        println!("Cart cleared Successfully")
     }
 }
 
 
-   
+fn view_all_order(path:&str) {
+    let order_db: Vec<Order> = match load_database(path) {
+        Ok(cart) => cart,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+
+    if !order_db.is_empty(){
+        println!("All Available Order(s)");
+        for (index, order) in order_db.iter().enumerate() {
+            order_output(index, order);
+        }
+    }else {
+        println!("There is no Available Order")
+    }
+}
+
+
+fn update_order_status(path:&str, index:usize){
+    let mut order_db:Vec<Order> = match load_database(path) {
+        Ok(order) => order,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+
+    println!("Options: \n1. Processing\n2. Shipped\n3. Delivered\n4. Cancelled");
+    let input = user_input("Select an Option:");
+
+    let new_status = match get_order_status(&input) {
+        Some(status) => status,
+        None => {
+            println!("Invalid Status Selection");
+            return;
+        }
+    };
+
+    match order_db.get_mut(index -1) {
+        Some(order) => {
+            order.status = new_status;
+
+            match save_file(path, &order_db) {
+                Ok(done) => {
+                    println!("Order Updated Successfully");
+                    
+                },
+                Err(err) => {
+                    println!("{}", err)
+                }
+            }
+        },
+        None => {
+            println!("Invalid Selection of Order");
+            return;
+        }
+    }
+}
+
+
+fn view_my_orders(path:&str, account:&Account){
+    let mut order_db:Vec<Order> = match load_database(path) {
+        Ok(order) => order,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+
+    for (index, order) in order_db.iter().enumerate(){
+        order_output(index, order);
+    }
+
+    let input = user_input("Select an Order to Check Status:");
+
+    view_my_single_order(&input, path)
+    
+}
+
+
+fn view_my_single_order(input: &str, path:&str){
+
+    let order_db:Vec<Order> = match load_database(path) {
+        Ok(order) => order,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    let index:usize = match input.trim().parse() {
+        Ok(num) => num,
+        Err(err) => {
+            println!("Invalid Input Selection");
+            return;
+        }
+    };
+
+    match order_db.get(index-1) {
+        Some(order) => {
+            
+            order_output(index, order);
+        },
+        None => {println!("Order not found!")}
+    }
+}
 
 
 
@@ -1080,11 +1281,18 @@ fn clear_my(account:&Account, carts:&mut Vec<Cart>, cart_path: &str) {
 
 
 
-
-
-
-
-
+fn order_output(index:usize, order:&Order){
+    println!(
+            "----------------------\n{}. User Name: {}    -    User Email: {}\nOrders: {:#?}\nOrder Status: {:?}   -   Grand Total: N{:.2}\n",
+            index +1,
+            order.user.user.name.trim().to_uppercase(),
+            order.user.user.email.trim().to_lowercase(),
+            order.carts,
+            order.status,
+            order.grand_total
+            
+        )
+}
 
 
 
@@ -1294,6 +1502,16 @@ fn check_stock(stock:&str) -> Result<i32, String> {
     };
 
     Ok(stock)
+}
+
+fn get_order_status(input: &str) -> Option<OrderStatus> {
+    match input.trim() {
+        "1" => Some(OrderStatus::Processing),
+        "2" => Some(OrderStatus::Shipped),
+        "3" => Some(OrderStatus::Delivered),
+        "4" => Some(OrderStatus::Cancelled),
+        _ => None
+    }
 }
 
 

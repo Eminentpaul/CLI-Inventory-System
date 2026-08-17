@@ -2,28 +2,6 @@
   {
     "user": {
       "user": {
-        "name": "Oshi Nichodemus\r\n",
-        "address": "Emene\r\n",
-        "email": "email@email.com\r\n",
-        "user_type": "Guest",
-        "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$f2tA2VfP0QoBVbrvPTb1Aw$kUw72rvxQLTstIDnMetUrcJBKObX/dcGumUf23SCWV4",
-        "status": "LoggedIn"
-      },
-      "account_number": "7031135009",
-      "balance": 0.0
-    },
-    "product": {
-      "name": "Dell Latitude 5511\r\n",
-      "price": 450.0,
-      "stock": 15,
-      "category": "Computing"
-    },
-    "quantity": 2,
-    "active": true
-  },
-  {
-    "user": {
-      "user": {
         "name": "Oshi Paulinus Offorbuike\r\n",
         "address": "93b Orifite Street\r\n",
         "email": "eminent2547@gmail.com\r\n",
@@ -41,7 +19,7 @@
       "category": "Computing"
     },
     "quantity": 2,
-    "active": true
+    "active": false
   },
   {
     "user": {
@@ -63,7 +41,7 @@
       "category": "Electronics"
     },
     "quantity": 3,
-    "active": true
+    "active": false
   },
   {
     "user": {
@@ -85,28 +63,6 @@
       "category": "Fashion"
     },
     "quantity": 4,
-    "active": true
-  },
-  {
-    "user": {
-      "user": {
-        "name": "Oshi Nichodemus\r\n",
-        "address": "Emene\r\n",
-        "email": "email@email.com\r\n",
-        "user_type": "Guest",
-        "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$f2tA2VfP0QoBVbrvPTb1Aw$kUw72rvxQLTstIDnMetUrcJBKObX/dcGumUf23SCWV4",
-        "status": "LoggedIn"
-      },
-      "account_number": "7031135009",
-      "balance": 500.0
-    },
-    "product": {
-      "name": "T-Shirt\r\n",
-      "price": 20.0,
-      "stock": 5,
-      "category": "Fashion"
-    },
-    "quantity": 1,
-    "active": true
+    "active": false
   }
 ]
