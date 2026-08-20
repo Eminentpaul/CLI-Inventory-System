@@ -256,50 +256,20 @@ fn main() {
                             }
                         };
 
-                        let product_name = user_input("Enter Product Name:");
-                        let price = user_input("Enter Price:");
+                        
 
-                        let price = match check_price(&price) {
-                            Ok(num) => num,
-                            Err(err) => {
-                                println!("{}", err);
-                                continue;
-                            }
-                        };
-
-                        let stock = user_input("Enter the number of Stocks:");
-                        let stock = match check_stock(&stock) {
-                            Ok(num) => num,
-                            Err(err) => {
-                                println!("{}", err);
-                                continue;
-                            }
-                        };
-
-                        println!(
-                            "Select category:\n1. Food\n2. Electronics\n3. Fashion\n4. Grocery\n5. Computing"
-                        );
-
-                        let cate = user_input("Select Category");
-                        let category = match get_category(&cate) {
-                            Some(cat) => cat,
-                            None => {
-                                println!("Invalid Category");
-                                continue;
-                            }
-                        };
-
-                        if account.user.user_type == UserType::Admin {
-
-                            match generate_codes("PCIS"){
-                                Ok(code ) => {
-                                    add_product(price, &code, stock, &product_name, category, product_path)
-                                },
-                                Err(err) => {
-                                    println!("{}", err);
-                                    continue;
-                                }
-                            };
+                        if account.user.user_type != UserType::Admin {
+                            let product_name = user_input("Enter Product Name:");
+                            let price = user_input("Enter Price:");
+                            let stock = user_input("Enter the number of Stocks:");
+                            
+                            println!(
+                                "Select category:\n1. Food\n2. Electronics\n3. Fashion\n4. Grocery\n5. Computing"
+                            );
+                            
+                            let cate = user_input("Select Category");
+                            // add_product(price, &code, stock, &product_name, category, product_path)
+                            
                             
                         } else {
                             println!("Only Admin can perform this action")
@@ -328,33 +298,35 @@ fn main() {
                     Ok(num) => num,
                     Err(_) => {
                         println!("Invalid Input");
-                        return;
+                        continue;;
                     }
                 };
 
                 let product = match view_product(&product_path, serial) {
-                    Ok(prod) => prod,
+                    Ok(prod) => {
+                        product_output(&prod, serial - 1);
+
+                        println!(
+                            "Product Options:\n1. Restock Product\n2. Update Product\n3. Add to Cart\n4. Delete Product"
+                        );
+                        let input = user_input("Select an Option:");
+
+                        single_product_commands(
+                            input,
+                            serial,
+                            prod,
+                            cart_path,
+                            product_path,
+                            &logged_in_account,
+                        );
+                    },
                     Err(err) => {
                         println!("{}", err);
-                        return;
+                        continue;
                     }
                 };
 
-                product_output(&product, serial - 1);
-
-                println!(
-                    "Product Options:\n1. Restock Product\n2. Update Product\n3. Add to Cart\n4. Delete Product"
-                );
-                let input = user_input("Select an Option:");
-
-                single_product_commands(
-                    input,
-                    serial,
-                    product,
-                    cart_path,
-                    product_path,
-                    &logged_in_account,
-                );
+                
             }
 
             "4" => {
@@ -594,28 +566,30 @@ fn create_account(
         }
     };
 
-    loop {
-        let exists= db.iter().any(|acct| acct.account_number == generate_account_number(&phone_no));
 
-        if exists{
-            // println!("Account Already Existed!");
-            break Err("Account Already Existed!".to_string());
-        }
+    let exists= db.iter().any(|acct| acct.account_number == generate_account_number(&phone_no));
 
-        let user = User::new(name.to_string(), address.to_string(), &code, email.to_string(), password.to_string());
-        let acct = Account::new(&user, &phone_no);
-
-        db.push(acct);
-
-        match save_file(path, &db) {
-            Ok(_) => Ok(()),
-            Err(_) => {
-                Err("Account not Created Successfully!")
-            }
-        };
+    if exists{
+        // println!("Account Already Existed!");
+        return Err("Account Already Existed!".to_string());
     }
 
+    let user = User::new(name.to_string(), address.to_string(), &code, email.to_string(), password.to_string());
+    let acct = Account::new(&user, &phone_no);
+
+    db.push(acct);
+
+    match save_file(path, &db) {
+        Ok(_) => Ok(()),
+        Err(_) => {
+            Err("Account not Created Successfully!".to_string())
+        }
+    };
+
+    Ok(())
 }
+
+
 
 fn login(phone_no: &str, password: &str, path: &str) -> Result<Account, String> {
     let mut db: Vec<Account> = match load_database(path) {
@@ -626,6 +600,8 @@ fn login(phone_no: &str, password: &str, path: &str) -> Result<Account, String> 
     };
 
     // println!("database: {:?}", db);
+
+    // if 
 
     for account in db.iter_mut() {
         if account.account_number == generate_account_number(phone_no) {
@@ -640,12 +616,42 @@ fn login(phone_no: &str, password: &str, path: &str) -> Result<Account, String> 
     Err("Invalid Phone Number or Passowrd".to_string())
 }
 
-fn add_product(price: f64, code: &str, stock: i32, name: &str, category: Category, path: &str) -> Result<(), String> {
+fn add_product(price: &str, code: &str, stock: &str, name: &str, category: &str, path: &str) -> Result<(), String> {
     
     let mut db: Vec<Product> = match load_database(path) {
         Ok(product) => product,
         Err(err) => {
             return Err(err.to_string())
+        }
+    };
+
+    let stock = match check_stock(&stock) {
+        Ok(num) => num,
+        Err(err) => {
+            return Err(err)
+        }
+    };
+
+    let price = match check_price(&price) {
+        Ok(num) => num,
+        Err(err) => {
+            return Err(err)
+        }
+    };
+
+    let category = match get_category(category) {
+        Some(cat) => cat,
+        None => {
+            return Err("Invalid Category".to_string())
+        }
+    };
+    
+    match generate_codes("PCIS"){
+        Ok(code ) => {
+        },
+        Err(err) => {
+            return Err(err);
+            
         }
     };
 
@@ -667,25 +673,24 @@ fn view_product(path: &str, serial: usize) -> Result<Product, String> {
     let db: Vec<Product> = match load_database(path) {
         Ok(product) => product,
         Err(err) => {
-            return Err(err.to_string());
+            return Err(err);
         }
     };
 
     println!("============================\nProduct Detials\n-----------------");
     match db.get(serial - 1) {
         Some(product) => Ok(product.clone()),
-        None => return Err("Product not Found!".to_string()),
+        None => Err("Product not Found!".to_string()),
     }
 
     // product_output(&db[serial-1], serial-1);
 }
 
-fn update_product(index: usize, path: &str) {
+fn update_product(index: usize, path: &str) -> Result<String, String>{
     let mut db: Vec<Product> = match load_database(path) {
         Ok(product) => product,
         Err(err) => {
-            println!("{}", err);
-            return;
+            return Err(err);
         }
     };
 
@@ -699,8 +704,7 @@ fn update_product(index: usize, path: &str) {
             let price = match check_price(&price) {
                 Ok(num) => num,
                 Err(err) => {
-                    println!("{}", err);
-                    return;
+                    return Err(err);
                 }
             };
 
@@ -708,8 +712,7 @@ fn update_product(index: usize, path: &str) {
             let stock = match check_stock(&stock) {
                 Ok(num) => num,
                 Err(err) => {
-                    println!("{}", err);
-                    return;
+                    return Err(err);
                 }
             };
 
@@ -721,24 +724,25 @@ fn update_product(index: usize, path: &str) {
             let category = match get_category(&cate) {
                 Some(cat) => cat,
                 None => {
-                    println!("Invalid Category");
-                    return;
+                    return Err("Invalid Category".to_string());
+                    
                 }
             };
 
             product.name = product_name.to_string();
             product.price = price;
             product.stock = stock;
-            product.category = category
+            product.category = category;
+
+            return Ok("Product Update Done".to_string())
         }
-        None => println!("Product not Found"),
+        None => return Err("Product not Found".to_string()),
     }
 
     match save_file(path, &db) {
-        Ok(_) => println!("Product Updated Successfully!"),
+        Ok(_) => return Ok("Product Updated Successfully!".to_string()),
         Err(err) => {
-            println!("{}", err);
-            println!("Product not Updated Successfully!")
+            return Err(err);
         }
     };
 
@@ -764,20 +768,20 @@ fn view_all_product(path: &str) {
     }
 }
 
-fn restock(stock: &str, serial_no: usize, path: &str) {
+fn restock(stock: &str, serial_no: usize, path: &str) -> Result<String, String> {
     let mut db: Vec<Product> = match load_database(path) {
         Ok(prod) => prod,
         Err(err) => {
-            println!("{}", err);
-            return;
+            return Err(err);
+            
         }
     };
 
     let new_stock = match check_stock(stock) {
         Ok(stock) => stock,
         Err(err) => {
-            println!("{}", err);
-            return;
+            return Err(err);
+            
         }
     };
 
@@ -785,29 +789,28 @@ fn restock(stock: &str, serial_no: usize, path: &str) {
         Some(product) => {
             product.stock += new_stock;
         }
-        None => println!("Product not Found!"),
+        None => return Err("Product not Found!".to_string()),
     }
 
     match save_file(path, &db) {
-        Ok(_) => println!("{} Product Restocked Successfully", db[serial_no - 1].name),
+        Ok(_) => {
+            let response = format!("{} Product Restocked Successfully", db[serial_no - 1].name);
+            return Ok(response)
+        },
         Err(err) => {
-            println!("{}", err);
-            println!(
-            "{} Product Restocked not Successfully",
-            db[serial_no - 1].name
-        )
+            return Err(err);
+            
         }
     };
 
-    
+    Ok("Restocked".to_string())
 }
 
-fn add_to_cart(user: &Account, quantity: i32, product: &Product, path: &str) {
+fn add_to_cart(user: &Account, quantity: i32, product: &Product, path: &str)-> Result<(), String> {
     let mut cart_db: Vec<Cart> = match load_database(path) {
         Ok(cart) => cart,
         Err(err) => {
-            println!("{}", err);
-            return;
+            return Err(err);
         }
     };
 
@@ -816,14 +819,13 @@ fn add_to_cart(user: &Account, quantity: i32, product: &Product, path: &str) {
         cart_db.push(cart);
 
         match save_file(path, &cart_db) {
-            Ok(_) => println!("Product Successfully Added to the Cart"),
+            Ok(_) => return Ok(()),
             Err(err) => {
-                println!("{}", err);
-                println!("Product Not Added to the Cart")
+                return Err(err);
             }
         };
     } else {
-        println!("Product Out of Stock")
+        return Err("Product Out of Stock".to_string());
     }
 }
 
@@ -884,29 +886,29 @@ fn change_user_type(account: &Option<Account>, path: &str) -> Result<String, Str
     return Err("Only Authorized User can perform this action!".to_string());
 }
 
-fn delete_product(path: &str, serial: usize) {
+fn delete_product(path: &str, serial: usize)-> Result<(), String> {
     let mut prod_db: Vec<Product> = match load_database(path) {
         Ok(product) => product,
         Err(err) => {
-            println!("{}", err);
-            return;
+            return Err(err);
         }
     };
 
     match prod_db.get_mut(serial - 1) {
         Some(_prod) => {
             prod_db.remove(serial - 1);
+
+            match save_file(path, &prod_db) {
+                Ok(_) => return Ok(()),
+                Err(err) => {
+                    return Err(err);
+                }
+            };
         }
-        None => println!("Product not Found!"),
+        None => return Err("Product not Found!".to_string()),
     }
 
-    match save_file(path, &prod_db) {
-        Ok(_) => println!("Product deleted Successfully"),
-        Err(err) => {
-            println!("{}", err);
-            println!("Product not deleted Successfully")
-        }
-    };
+    
 
     
 }
@@ -1529,56 +1531,51 @@ fn single_product_commands(
     cart_path: &str,
     product_path: &str,
     logged_in_account: &Option<Account>,
-) {
+) -> Result<(), String> {
+
+    let active_account = match verify_login(logged_in_account.clone()) {
+            Ok(account) => account,
+            Err(err) => {
+                return Err(err);
+            }
+        };
+
     match input.trim() {
         "1" => {
-            let active_account = match verify_login(logged_in_account.clone()) {
-                Ok(account) => account,
-                Err(err) => {
-                    println!("{}", err);
-                    return;
-                }
-            };
-
+            
             if active_account.user.user_type == UserType::Admin {
                 let stock = &user_input("Enter the number of Stocks:");
-                restock(stock, serial, product_path);
+                match restock(stock, serial, product_path) {
+                    Ok(res) => return Ok(()),
+                    Err(err) => {
+                        return Err(err);
+                    }
+                };
             } else {
-                println!("Only Admin can restock a product");
+                Err("Only Admin can restock a product".to_string())
                 // return;
             }
         }
 
         "2" => {
-            let active_account = match verify_login(logged_in_account.clone()) {
-                Ok(account) => account,
-                Err(err) => {
-                    println!("{}", err);
-                    return;
-                }
-            };
+            // UPDATING A SINGLE PRODUCT 
 
             if active_account.user.user_type == UserType::Admin {
-                update_product(serial, product_path);
+                match update_product(serial, product_path) {
+                    Ok(res) => return Ok(()),
+                    Err(err) => return Err(err)
+                };
             } else {
-                println!("Only Admin has the Permission to Perform the action")
+                Err("Only Admin has the Permission to Perform the action".to_string())
             }
         }
 
         "3" => {
-            let active_account = match verify_login(logged_in_account.clone()) {
-                Ok(account) => account,
-                Err(err) => {
-                    println!("{}", err);
-                    return;
-                }
-            };
-
+            
             let mut cart_db: Vec<Cart> = match load_database(cart_path) {
                 Ok(cart) => cart,
                 Err(err) => {
-                    println!("{}", err);
-                    return;
+                    return Err(err);
                 }
             };
 
@@ -1586,8 +1583,7 @@ fn single_product_commands(
             let quantity = match check_stock(&quantity) {
                 Ok(num) => num,
                 Err(err) => {
-                    println!("{}", err);
-                    return;
+                    return Err(err);
                 }
             };
 
@@ -1597,41 +1593,43 @@ fn single_product_commands(
                         == product.name.trim().to_lowercase()
             }) {
                 if quantity > product.stock {
-                    println!("The requesting quantity is more than the Available stock")
+                    return Err("The requesting quantity is more than the Available stock".to_string())
                 } else {
                     prod.quantity += quantity;
-                }
-
-                match save_file(cart_path, &cart_db) {
-                    Ok(done) => done,
+                    
+                    match save_file(cart_path, &cart_db) {
+                    Ok(_) => return Ok(()),
                     Err(err) => {
-                        println!("{}", err);
-                        return;
+                        return Err(err);
                     }
                 };
+
+                }
+
+                
             } else {
                 // println!("Not increased")
-                add_to_cart(&active_account, quantity, &product, cart_path);
+                match add_to_cart(&active_account, quantity, &product, cart_path) {
+                    Ok(_) => return Ok(()),
+                    Err(err) => {
+                        return Err(err);
+                    }
+                };
+                
             }
         }
 
         "4" => {
-            let active_account = match verify_login(logged_in_account.clone()) {
-                Ok(account) => account,
-                Err(err) => {
-                    println!("{}", err);
-                    return;
-                }
-            };
-
+            
             if active_account.user.user_type == UserType::Admin {
                 delete_product(product_path, serial);
+                Ok(())
             } else {
-                println!("Only Admin has the Permission to Perform the action")
+                return Err("Only Admin has the Permission to Perform the action".to_string())
             }
         }
 
-        _ => println!("Invalid Input for Product Actions"),
+        _ => return Err("Invalid Input for Product Actions".to_string()),
     }
 }
 
