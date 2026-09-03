@@ -1,25 +1,25 @@
 [
   {
     "user": {
-      "id": "UCIS2430",
-      "name": "Oshi Paulinus O.\r\n",
+      "id": "UCIS1770",
+      "name": "Oshi Paulinus Offorbuike\r\n",
       "address": "93b Orifite Close\r\n",
-      "email": "email@email.com\r\n",
+      "email": "eminent2547@gmail.com\r\n",
       "user_type": "Admin",
-      "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$SOX4XSiGGq09ewoGbv6mZw$fK9a9rgtvnJtS/p5E7TmC9ZjDRpozRTeUsCZP/gvgXE",
+      "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$UMbv21vabgWNQsXTM7kxiA$+t5WGKvnbLYUjqHcq7XGLRgb9mc2eUsVvPnepZV2ET4",
       "status": "LoggedOut"
     },
     "account_number": "8143122946",
-    "balance": 0.0
+    "balance": 5700.0
   },
   {
     "user": {
-      "id": "UCIS8192",
-      "name": "Oshi Nichodemus E.\r\n",
-      "address": "Ngenanwanta Ezinesi Oduma\r\n",
-      "email": "nicho@email.com\r\n",
+      "id": "UCIS7486",
+      "name": "Oshi Nichodemus Eberechukwu\r\n",
+      "address": "Umueze Eneme\r\n",
+      "email": "nicho@gmail.com\r\n",
       "user_type": "Guest",
-      "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$oFmXGG5nxKMeUYNYbdmCQw$CEOWGq5QkxPmpUgcNInnGpSa/coXKQkUqii10nPCzSk",
+      "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$5l/LeCDBjI5nFfsvRO8hSg$VkXqysqw7j/uB8he2lRDVmUTcsgyvES3tJSv03rXpgg",
       "status": "LoggedOut"
     },
     "account_number": "7031135009",
