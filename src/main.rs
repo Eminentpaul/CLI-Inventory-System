@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     format,
     io::{self, BufReader, BufWriter},
-    println, 
+    println,
 };
 
 use argon2::{
@@ -321,8 +321,8 @@ fn main() {
                             cart_path,
                             product_path,
                             &logged_in_account,
-                        ){
-                            Ok(_) => {},
+                        ) {
+                            Ok(_) => {}
                             Err(err) => {
                                 println!("{}", err);
                                 continue;
@@ -433,8 +433,8 @@ fn main() {
                     return;
                 }
 
-                match view_all_order(order_path){
-                    Ok(_)=> {},
+                match view_all_order(order_path) {
+                    Ok(_) => {}
                     Err(err) => {
                         println!("{}", err);
                         continue;
@@ -473,8 +473,8 @@ fn main() {
                     }
                 };
                 match view_my_orders(order_path, &active_account) {
-                    Ok(_) => {},
-                    Err(err) =>{
+                    Ok(_) => {}
+                    Err(err) => {
                         println!("{}", err);
                         continue;
                     }
@@ -629,7 +629,7 @@ fn create_account(
         Ok(_) => return Ok(()),
         Err(_) => {
             return Err("Account not Created Successfully!".to_string());
-        },
+        }
     };
 
     // Ok(())
@@ -1609,8 +1609,6 @@ fn order_output(index: usize, order: &Order) {
 
     println!("==================================");
 }
-
-
 
 fn hash_password(password: &str) -> String {
     let salt = SaltString::generate(OsRng);
