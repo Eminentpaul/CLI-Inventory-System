@@ -2,7 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 use std::{
-    format, io::{self, BufReader, BufWriter}, println, vec,
+    format,
+    io::{self, BufReader, BufWriter},
+    println, vec,
 };
 
 use argon2::{
@@ -13,18 +15,17 @@ use rand::{Rng, rngs::OsRng, seq::index};
 use std::fs::File;
 // use validator::{Validate, ValidateEmail};
 
-// Used for the generated codes for different ids 
+// Used for the generated codes for different ids
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
-struct IDCodes{
-    code: String
+struct IDCodes {
+    code: String,
 }
 
 impl IDCodes {
-    fn new(code:String) -> Self {
+    fn new(code: String) -> Self {
         Self { code: code }
     }
 }
-
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Copy, Clone)]
 enum Command {
@@ -61,8 +62,6 @@ impl Command {
     }
 }
 
-
-
 const MENU_CONTENTS: &[Command] = &[
     Command::AddProduct,
     Command::ViewAllProducts,
@@ -77,9 +76,6 @@ const MENU_CONTENTS: &[Command] = &[
     Command::FundAccount,
     Command::Exit,
 ];
-
-
-
 
 // User Types
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -125,7 +121,7 @@ struct User {
 }
 
 impl User {
-    fn new(name: String, address: String, code:&str, email: String, password: String) -> Self {
+    fn new(name: String, address: String, code: &str, email: String, password: String) -> Self {
         let hashed = hash_password(password.as_str());
 
         Self {
@@ -197,17 +193,18 @@ impl Cart {
     }
 }
 
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct CartProduct {
     product_id: String,
-    quantity: i32
+    quantity: i32,
 }
 
-
 impl CartProduct {
-    fn new(id: String, quantity: i32) -> Self{
-        Self { product_id: id, quantity }
+    fn new(id: String, quantity: i32) -> Self {
+        Self {
+            product_id: id,
+            quantity,
+        }
     }
 }
 
@@ -217,15 +214,11 @@ struct Order {
     user_id: String,
     products: Vec<CartProduct>,
     grand_total: f64,
-    status: OrderStatus
+    status: OrderStatus,
 }
 
 impl Order {
-    fn new(products: Vec<CartProduct>, grand_total:f64, user_id: &str, order_id: &str) -> Self {
-
-
-
-
+    fn new(products: Vec<CartProduct>, grand_total: f64, user_id: &str, order_id: &str) -> Self {
         Self {
             order_id: order_id.to_string(),
             user_id: user_id.to_string(),
@@ -242,7 +235,6 @@ fn main() {
     let product_path = "product.json";
     let cart_path = "cart.json";
     let order_path = "order.json";
-    
 
     let mut logged_in_account: Option<Account> = None;
     loop {
@@ -266,17 +258,16 @@ fn main() {
                                 continue;
                             }
                         };
-                        
 
                         if account.user.user_type == UserType::Admin {
                             let product_name = user_input("Enter Product Name:");
                             let price = user_input("Enter Price:");
                             let stock = user_input("Enter the number of Stocks:");
-                            
+
                             println!(
                                 "Select category:\n1. Food\n2. Electronics\n3. Fashion\n4. Grocery\n5. Computing"
                             );
-                            
+
                             let cate = user_input("Select Category");
                             match add_product(&price, &stock, &product_name, &cate, product_path) {
                                 Ok(_) => println!("Product Added Successfully"),
@@ -285,19 +276,15 @@ fn main() {
                                     continue;
                                 }
                             }
-                            
-                            
                         } else {
                             println!("Only Admin can perform this action")
                         }
-                    },
+                    }
                     Err(err) => {
                         println!("{}", err);
                         continue;
                     }
                 };
-
-                
             }
 
             "2" => {
@@ -314,7 +301,7 @@ fn main() {
                     Ok(num) => num,
                     Err(_) => {
                         println!("Invalid Input");
-                        continue;;
+                        continue;
                     }
                 };
 
@@ -335,14 +322,12 @@ fn main() {
                             product_path,
                             &logged_in_account,
                         );
-                    },
+                    }
                     Err(err) => {
                         println!("{}", err);
                         continue;
                     }
                 };
-
-                
             }
 
             "4" => {
@@ -356,8 +341,8 @@ fn main() {
 
                 if active_account.user.user_type == UserType::Admin {
                     match view_all_cart(acct_path, product_path, cart_path) {
-                        Ok(_) => {},
-                        Err(err) => println!("{}", err)
+                        Ok(_) => {}
+                        Err(err) => println!("{}", err),
                     }
                 } else {
                     println!("Only Admin can perform this action")
@@ -373,9 +358,8 @@ fn main() {
                     }
                 };
 
-
                 match view_my_cart(cart_path, product_path, acct_path, &account) {
-                    Ok(_) => {},
+                    Ok(_) => {}
                     Err(err) => {
                         println!("{}", err)
                     }
@@ -387,10 +371,11 @@ fn main() {
                 match input.trim() {
                     "1" => {
                         // Placing Order
-                        match checkout(&mut account, cart_path, product_path, order_path, acct_path) {
+                        match checkout(&mut account, cart_path, product_path, order_path, acct_path)
+                        {
                             Ok(_) => {
                                 println!("Ordered successfully!")
-                            },
+                            }
                             Err(err) => {
                                 println!("{err}");
                                 continue;
@@ -403,7 +388,7 @@ fn main() {
                         match delete_item_from_my_cart(&account, cart_path, product_path) {
                             Ok(_) => {
                                 println!("Item Deleted successfuly");
-                            },
+                            }
                             Err(err) => {
                                 println!("{}", err);
                                 continue;
@@ -416,7 +401,7 @@ fn main() {
                         match clear_my_cart(&account, cart_path) {
                             Ok(_) => {
                                 println!("Cart cleared successfuly")
-                            },
+                            }
                             Err(err) => {
                                 println!("{}", err);
                                 continue;
@@ -457,9 +442,9 @@ fn main() {
                 match update_order_status(order_path, index) {
                     Ok(_) => {
                         println!("Order Updated Successfully")
-                    },
+                    }
                     Err(err) => {
-                        println!("{}",err);
+                        println!("{}", err);
                         continue;
                     }
                 }
@@ -481,22 +466,17 @@ fn main() {
             "8" => {
                 let full_name = user_input("Enter Full Name:");
                 let email = user_input("Enter Your Email:");
-                
+
                 let address = user_input("Enter your Full Address:");
 
                 let password = user_input("Enter Account Password");
                 let phone_no = user_input("Enter Phone Number");
                 let path = acct_path;
 
-
-                match create_account(&full_name, &email, &address, &password, &phone_no, path){
-                            Ok(_) => println!("Account Created Successfully"),
-                            Err(err) => println!("{}", err)
-                        }
-                
-
-                
-
+                match create_account(&full_name, &email, &address, &password, &phone_no, path) {
+                    Ok(_) => println!("Account Created Successfully"),
+                    Err(err) => println!("{}", err),
+                }
             }
 
             "9" => {
@@ -525,13 +505,12 @@ fn main() {
                                 continue;
                             }
                         };
-                    },
+                    }
                     Err(err) => {
                         println!("{}", err);
                         continue;
                     }
                 };
-                
 
                 // println!("Account acive: {:#?}", logged_in_account);
             }
@@ -577,7 +556,7 @@ fn create_account(
     password: &str,
     phone_no: &str,
     path: &str,
-) -> Result<(), String>{
+) -> Result<(), String> {
     let mut db: Vec<Account> = match load_database(path) {
         Ok(account) => account,
         Err(err) => {
@@ -587,21 +566,17 @@ fn create_account(
 
     // Email validation
     if !validate_email(&email) {
-        return Err("Invalid Email".to_string())
+        return Err("Invalid Email".to_string());
     }
-
 
     // Password validation
     match validate_password(&password) {
         Ok(pass) => pass,
-        Err(err) => {
-            return Err(err.to_string())
-        }
+        Err(err) => return Err(err.to_string()),
     };
 
-
     match check_phone_number(&phone_no) {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(err) => {
             return Err(err);
         }
@@ -609,35 +584,36 @@ fn create_account(
 
     let code = match generate_codes("UCIS") {
         Ok(code) => code,
-        Err(err) => {
-            return Err(err)
-        }
+        Err(err) => return Err(err),
     };
 
+    let exists = db
+        .iter()
+        .any(|acct| acct.account_number == generate_account_number(&phone_no));
 
-    let exists= db.iter().any(|acct| acct.account_number == generate_account_number(&phone_no));
-
-    if exists{
+    if exists {
         // println!("Account Already Existed!");
         return Err("Account Already Existed!".to_string());
     }
 
-    let user = User::new(name.to_string(), address.to_string(), &code, email.to_string(), password.to_string());
+    let user = User::new(
+        name.to_string(),
+        address.to_string(),
+        &code,
+        email.to_string(),
+        password.to_string(),
+    );
     let acct = Account::new(&user, &phone_no);
 
     db.push(acct);
 
     match save_file(path, &db) {
         Ok(_) => Ok(()),
-        Err(_) => {
-            Err("Account not Created Successfully!".to_string())
-        }
+        Err(_) => Err("Account not Created Successfully!".to_string()),
     };
 
     Ok(())
 }
-
-
 
 fn login(phone_no: &str, password: &str, path: &str) -> Result<Account, String> {
     let mut db: Vec<Account> = match load_database(path) {
@@ -649,7 +625,7 @@ fn login(phone_no: &str, password: &str, path: &str) -> Result<Account, String> 
 
     // println!("database: {:?}", db);
 
-    // if 
+    // if
 
     for account in db.iter_mut() {
         if account.account_number == generate_account_number(phone_no) {
@@ -664,58 +640,48 @@ fn login(phone_no: &str, password: &str, path: &str) -> Result<Account, String> 
     Err("Invalid Phone Number or Passowrd".to_string())
 }
 
-fn add_product(price: &str, stock: &str, name: &str, category: &str, path: &str) -> Result<(), String> {
-    
+fn add_product(
+    price: &str,
+    stock: &str,
+    name: &str,
+    category: &str,
+    path: &str,
+) -> Result<(), String> {
     let mut db: Vec<Product> = match load_database(path) {
         Ok(product) => product,
-        Err(err) => {
-            return Err(err.to_string())
-        }
+        Err(err) => return Err(err.to_string()),
     };
 
     let stock = match check_stock(&stock) {
         Ok(num) => num,
-        Err(err) => {
-            return Err(err)
-        }
+        Err(err) => return Err(err),
     };
 
     let price = match check_price(&price) {
         Ok(num) => num,
-        Err(err) => {
-            return Err(err)
-        }
+        Err(err) => return Err(err),
     };
 
     let category = match get_category(category) {
         Some(cat) => cat,
-        None => {
-            return Err("Invalid Category".to_string())
-        }
+        None => return Err("Invalid Category".to_string()),
     };
-    
-    match generate_codes("PCIS"){
-        Ok(code ) => {
+
+    match generate_codes("PCIS") {
+        Ok(code) => {
             let new_product = Product::new(&code, &name.to_string(), price, stock, category);
 
             db.push(new_product);
 
             match save_file(path, &db) {
                 Ok(_) => return Ok(()),
-                Err(err) => {
-                    return Err(err)
-                }
+                Err(err) => return Err(err),
             }
-        },
+        }
         Err(err) => {
             return Err(err);
-            
         }
     };
-
-    
-    
-    
 }
 
 fn view_product(path: &str, serial: usize) -> Result<Product, String> {
@@ -735,7 +701,7 @@ fn view_product(path: &str, serial: usize) -> Result<Product, String> {
     // product_output(&db[serial-1], serial-1);
 }
 
-fn update_product(index: usize, path: &str) -> Result<(), String>{
+fn update_product(index: usize, path: &str) -> Result<(), String> {
     let mut db: Vec<Product> = match load_database(path) {
         Ok(product) => product,
         Err(err) => {
@@ -774,7 +740,6 @@ fn update_product(index: usize, path: &str) -> Result<(), String>{
                 Some(cat) => cat,
                 None => {
                     return Err("Invalid Category".to_string());
-                    
                 }
             };
 
@@ -782,7 +747,6 @@ fn update_product(index: usize, path: &str) -> Result<(), String>{
             product.price = price;
             product.stock = stock;
             product.category = category;
-
 
             match save_file(path, &db) {
                 Ok(_) => return Ok(()),
@@ -795,10 +759,6 @@ fn update_product(index: usize, path: &str) -> Result<(), String>{
         }
         None => return Err("Product not Found".to_string()),
     }
-
-    
-
-    
 }
 
 fn view_all_product(path: &str) {
@@ -825,7 +785,6 @@ fn restock(stock: &str, serial_no: usize, path: &str) -> Result<String, String> 
         Ok(prod) => prod,
         Err(err) => {
             return Err(err);
-            
         }
     };
 
@@ -833,7 +792,6 @@ fn restock(stock: &str, serial_no: usize, path: &str) -> Result<String, String> 
         Ok(stock) => stock,
         Err(err) => {
             return Err(err);
-            
         }
     };
 
@@ -847,18 +805,17 @@ fn restock(stock: &str, serial_no: usize, path: &str) -> Result<String, String> 
     match save_file(path, &db) {
         Ok(_) => {
             let response = format!("{} Product Restocked Successfully", db[serial_no - 1].name);
-            return Ok(response)
-        },
+            return Ok(response);
+        }
         Err(err) => {
             return Err(err);
-            
         }
     };
 
     Ok("Restocked".to_string())
 }
 
-fn add_to_cart(user: &Account, quantity: i32, product: &Product, path: &str)-> Result<(), String> {
+fn add_to_cart(user: &Account, quantity: i32, product: &Product, path: &str) -> Result<(), String> {
     let mut cart_db: Vec<Cart> = match load_database(path) {
         Ok(cart) => cart,
         Err(err) => {
@@ -866,7 +823,7 @@ fn add_to_cart(user: &Account, quantity: i32, product: &Product, path: &str)-> R
         }
     };
 
-    let mut cart_product:Vec<CartProduct> = Vec::new();
+    let mut cart_product: Vec<CartProduct> = Vec::new();
 
     let new_product = CartProduct::new(product.id.clone(), quantity);
     cart_product.push(new_product);
@@ -933,17 +890,15 @@ fn change_user_type(account: &Option<Account>, path: &str) -> Result<String, Str
         match save_file(path, &account_db) {
             Ok(_) => return Ok("Account User Type Changed Successfully!".to_string()),
             Err(err) => {
-
                 let error = format!("Change of User Type not Successful\nError: {}", err);
-                return Err(error.to_string())
+                return Err(error.to_string());
             }
         };
-
     }
     return Err("Only Authorized User can perform this action!".to_string());
 }
 
-fn delete_product(path: &str, serial: usize)-> Result<(), String> {
+fn delete_product(path: &str, serial: usize) -> Result<(), String> {
     let mut prod_db: Vec<Product> = match load_database(path) {
         Ok(product) => product,
         Err(err) => {
@@ -964,13 +919,9 @@ fn delete_product(path: &str, serial: usize)-> Result<(), String> {
         }
         None => return Err("Product not Found!".to_string()),
     }
-
-    
-
-    
 }
 
-fn view_all_cart(acct_path: &str, product_path: &str, cart_path: &str) -> Result<(), String>{
+fn view_all_cart(acct_path: &str, product_path: &str, cart_path: &str) -> Result<(), String> {
     let cart_db: Vec<Cart> = match load_database(cart_path) {
         Ok(cart) => cart,
         Err(err) => {
@@ -991,42 +942,51 @@ fn view_all_cart(acct_path: &str, product_path: &str, cart_path: &str) -> Result
             return Err(err);
         }
     };
-
-
-
 
     if !cart_db.is_empty() {
         println!("All Available Carts");
         for (index, cart) in cart_db.iter().enumerate() {
-            if let Some(cart_account) = acct_db.iter().find(|account| account.user.id == cart.user_id) {
-                println!("----------------------\n{}. User Name: {}    -    User Email: {}\n=====================\n Products\n=======================", index+1, cart_account.user.name, cart_account.user.email.to_lowercase());
+            if let Some(cart_account) = acct_db
+                .iter()
+                .find(|account| account.user.id == cart.user_id)
+            {
+                println!(
+                    "----------------------\n{}. User Name: {}    -    User Email: {}\n=====================\n Products\n=======================",
+                    index + 1,
+                    cart_account.user.name,
+                    cart_account.user.email.to_lowercase()
+                );
 
-                for (prod_index, cart_product) in cart.products.iter().enumerate(){
-                    let Some(user_prod) = prod_db.iter().find(|p| p.id == cart_product.product_id) else {
+                for (prod_index, cart_product) in cart.products.iter().enumerate() {
+                    let Some(user_prod) = prod_db.iter().find(|p| p.id == cart_product.product_id)
+                    else {
                         continue;
                     };
-                        println!(
-                                    "----------------------\n{} Product Name: {}  -  Product Price: N{:.2}\nQuantity: {}   -   Total: N{:.2}\n",
-                                    prod_index + 1,
-                                    user_prod.name.trim(),
-                                    user_prod.price,
-                                    cart_product.quantity,
-                                    cart_product.quantity as f64 * user_prod.price
-                                );
-                    }
+                    println!(
+                        "----------------------\n{} Product Name: {}  -  Product Price: N{:.2}\nQuantity: {}   -   Total: N{:.2}\n",
+                        prod_index + 1,
+                        user_prod.name.trim(),
+                        user_prod.price,
+                        cart_product.quantity,
+                        cart_product.quantity as f64 * user_prod.price
+                    );
                 }
-                println!("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
             }
+            println!(
+                "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+            )
         }
+    }
 
-        Ok(())
-    } 
+    Ok(())
+}
 
-
-
-
-
-fn view_my_cart(cart_path: &str, product_path: &str, acct_path: &str, account: &Account) -> Result<(), String> {
+fn view_my_cart(
+    cart_path: &str,
+    product_path: &str,
+    acct_path: &str,
+    account: &Account,
+) -> Result<(), String> {
     let cart_db: Vec<Cart> = match load_database(cart_path) {
         Ok(cart) => cart,
         Err(err) => {
@@ -1047,35 +1007,39 @@ fn view_my_cart(cart_path: &str, product_path: &str, acct_path: &str, account: &
             return Err(err);
         }
     };
-
-
-
 
     if !cart_db.is_empty() {
         println!("Your Available Carts");
         for cart in cart_db.iter() {
             if cart.user_id == account.user.id {
-                println!("----------------------\nUser Name: {}    -    User Email: {}\n=====================\n Products\n=======================", account.user.name, account.user.email.to_lowercase());
+                println!(
+                    "----------------------\nUser Name: {}    -    User Email: {}\n=====================\n Products\n=======================",
+                    account.user.name,
+                    account.user.email.to_lowercase()
+                );
 
-                for (prod_index, cart_product) in cart.products.iter().enumerate(){
-                    let Some(user_prod) = prod_db.iter().find(|p| p.id == cart_product.product_id) else {
+                for (prod_index, cart_product) in cart.products.iter().enumerate() {
+                    let Some(user_prod) = prod_db.iter().find(|p| p.id == cart_product.product_id)
+                    else {
                         continue;
                     };
-                        println!(
-                                    "----------------------\n{} Product Name: {}  -  Product Price: N{:.2}\nQuantity: {}   -   Total: N{:.2}\n",
-                                    prod_index + 1,
-                                    user_prod.name.trim(),
-                                    user_prod.price,
-                                    cart_product.quantity,
-                                    cart_product.quantity as f64 * user_prod.price
-                                );
-                    }
+                    println!(
+                        "----------------------\n{} Product Name: {}  -  Product Price: N{:.2}\nQuantity: {}   -   Total: N{:.2}\n",
+                        prod_index + 1,
+                        user_prod.name.trim(),
+                        user_prod.price,
+                        cart_product.quantity,
+                        cart_product.quantity as f64 * user_prod.price
+                    );
                 }
-                println!("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
             }
+            println!(
+                "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+            )
         }
+    }
 
-        Ok(())
+    Ok(())
 }
 
 fn fund_my_account(account: &Account, amount: f64, path: &str) {
@@ -1111,7 +1075,6 @@ fn fund_my_account(account: &Account, amount: f64, path: &str) {
     };
 }
 
-
 fn checkout(
     active_account: &mut Account,
     cart_path: &str,
@@ -1119,7 +1082,6 @@ fn checkout(
     order_path: &str,
     acct_path: &str,
 ) -> Result<(), String> {
-
     // ==========================================
     // LOAD DATABASES
     // ==========================================
@@ -1152,7 +1114,6 @@ fn checkout(
         }
     };
 
-
     // ==========================================
     // FIND ACTIVE USER'S CART
     // ==========================================
@@ -1164,12 +1125,9 @@ fn checkout(
         Some(index) => index,
 
         None => {
-            return Err(format!(
-                "Your cart was not found "
-            ));
+            return Err(format!("Your cart was not found "));
         }
     };
-
 
     // ==========================================
     // CHECK CART
@@ -1183,7 +1141,6 @@ fn checkout(
         return Err("Your cart is empty.".to_string());
     }
 
-
     // ==========================================
     // CALCULATE GRAND TOTAL
     // ==========================================
@@ -1191,7 +1148,6 @@ fn checkout(
     let mut grand_total = 0.0;
 
     for cart_product in &cart_db[cart_index].products {
-
         let product = match prod_db
             .iter()
             .find(|product| product.id == cart_product.product_id)
@@ -1206,7 +1162,6 @@ fn checkout(
             }
         };
 
-
         // ==========================================
         // CHECK STOCK
         // ==========================================
@@ -1214,19 +1169,15 @@ fn checkout(
         if product.stock < cart_product.quantity {
             return Err(format!(
                 "Insufficient stock for {}. Available: {}, Requested: {}",
-                product.name,
-                product.stock,
-                cart_product.quantity
+                product.name, product.stock, cart_product.quantity
             ));
         }
-
 
         // ==========================================
         // CALCULATE SUBTOTAL
         // ==========================================
 
-        let subtotal =
-            cart_product.quantity as f64 * product.price;
+        let subtotal = cart_product.quantity as f64 * product.price;
 
         println!(
             "{} x {} @ ₦{:.2} = ₦{:.2}",
@@ -1239,19 +1190,14 @@ fn checkout(
         grand_total += subtotal;
     }
 
-
     // ==========================================
     // DISPLAY TOTAL
     // ==========================================
 
     println!("----------------------------------");
     println!("Grand Total: ₦{:.2}", grand_total);
-    println!(
-        "Current Balance: ₦{:.2}",
-        active_account.balance
-    );
+    println!("Current Balance: ₦{:.2}", active_account.balance);
     println!("----------------------------------");
-
 
     // ==========================================
     // CHECK BALANCE
@@ -1260,11 +1206,9 @@ fn checkout(
     if active_account.balance < grand_total {
         return Err(format!(
             "Insufficient balance. You have ₦{:.2}, but need ₦{:.2}",
-            active_account.balance,
-            grand_total
+            active_account.balance, grand_total
         ));
     }
-
 
     // ==========================================
     // GENERATE ORDER ID
@@ -1274,21 +1218,15 @@ fn checkout(
         Ok(id) => id,
 
         Err(err) => {
-            return Err(format!(
-                "Unable to generate order ID: {}",
-                err
-            ));
+            return Err(format!("Unable to generate order ID: {}", err));
         }
     };
-
 
     // ==========================================
     // COPY CART PRODUCTS
     // ==========================================
 
-    let cart_products =
-        cart_db[cart_index].products.clone();
-
+    let cart_products = cart_db[cart_index].products.clone();
 
     // ==========================================
     // CREATE ORDER
@@ -1301,27 +1239,20 @@ fn checkout(
         &order_id,
     );
 
-
     // ==========================================
     // FIND ACCOUNT IN DATABASE
     // ==========================================
 
     let account_index = match account_db
         .iter()
-        .position(|account| {
-            account.user.id == active_account.user.id
-        })
+        .position(|account| account.user.id == active_account.user.id)
     {
         Some(index) => index,
 
         None => {
-            return Err(
-                "Account was not found in account database."
-                    .to_string()
-            );
+            return Err("Account was not found in account database.".to_string());
         }
     };
-
 
     // ==========================================
     // DEDUCT BALANCE
@@ -1329,21 +1260,16 @@ fn checkout(
 
     active_account.balance -= grand_total;
 
-    account_db[account_index].balance =
-        active_account.balance;
-
+    account_db[account_index].balance = active_account.balance;
 
     // ==========================================
     // REDUCE PRODUCT STOCK
     // ==========================================
 
     for cart_product in &cart_products {
-
         let product = match prod_db
             .iter_mut()
-            .find(|product| {
-                product.id == cart_product.product_id
-            })
+            .find(|product| product.id == cart_product.product_id)
         {
             Some(product) => product,
 
@@ -1355,10 +1281,8 @@ fn checkout(
             }
         };
 
-
         product.stock -= cart_product.quantity;
     }
-
 
     // ==========================================
     // ADD ORDER
@@ -1366,42 +1290,23 @@ fn checkout(
 
     order_db.push(new_order);
 
-
     // ==========================================
     // REMOVE CART
     // ==========================================
 
     cart_db.remove(cart_index);
 
-
     // ==========================================
     // SAVE DATABASES
     // ==========================================
 
-    save_file(order_path, &order_db)
-        .map_err(|err| format!(
-            "Failed to save order: {}",
-            err
-        ))?;
+    save_file(order_path, &order_db).map_err(|err| format!("Failed to save order: {}", err))?;
 
-    save_file(product_path, &prod_db)
-        .map_err(|err| format!(
-            "Failed to save products: {}",
-            err
-        ))?;
+    save_file(product_path, &prod_db).map_err(|err| format!("Failed to save products: {}", err))?;
 
-    save_file(cart_path, &cart_db)
-        .map_err(|err| format!(
-            "Failed to save cart: {}",
-            err
-        ))?;
+    save_file(cart_path, &cart_db).map_err(|err| format!("Failed to save cart: {}", err))?;
 
-    save_file(acct_path, &account_db)
-        .map_err(|err| format!(
-            "Failed to save account: {}",
-            err
-        ))?;
-
+    save_file(acct_path, &account_db).map_err(|err| format!("Failed to save account: {}", err))?;
 
     // ==========================================
     // SUCCESS
@@ -1413,19 +1318,17 @@ fn checkout(
     println!("==================================");
     println!("Order ID:          {}", order_id);
     println!("Amount Paid:       ₦{:.2}", grand_total);
-    println!(
-        "Remaining Balance: ₦{:.2}",
-        active_account.balance
-    );
+    println!("Remaining Balance: ₦{:.2}", active_account.balance);
     println!("==================================");
 
     Ok(())
 }
 
-
-
-
-fn delete_item_from_my_cart(account: &Account, cart_path: &str, product_path: &str) -> Result<(), String> {
+fn delete_item_from_my_cart(
+    account: &Account,
+    cart_path: &str,
+    product_path: &str,
+) -> Result<(), String> {
     let mut cart_db: Vec<Cart> = match load_database(cart_path) {
         Ok(data) => data,
         Err(err) => {
@@ -1440,18 +1343,20 @@ fn delete_item_from_my_cart(account: &Account, cart_path: &str, product_path: &s
         }
     };
 
-    let user_cart_index = match cart_db.iter().position(|cart| cart.user_id == account.user.id) {
+    let user_cart_index = match cart_db
+        .iter()
+        .position(|cart| cart.user_id == account.user.id)
+    {
         Some(index) => index,
         None => {
             return Err("Your Cart is Empty!".to_string());
         }
-        
     };
 
     let mut my_products = cart_db[user_cart_index].products.clone();
 
-    for (index, product) in my_products.iter().enumerate(){
-        let Some(prod) = product_db.iter().find(|p| p.id == product.product_id)else {
+    for (index, product) in my_products.iter().enumerate() {
+        let Some(prod) = product_db.iter().find(|p| p.id == product.product_id) else {
             continue;
         };
 
@@ -1469,18 +1374,14 @@ fn delete_item_from_my_cart(account: &Account, cart_path: &str, product_path: &s
     let input_index = match input.trim().parse::<usize>() {
         Ok(index) => index,
         Err(err) => {
-            return  Err("Invalid input".to_string());
+            return Err("Invalid input".to_string());
         }
-        
     };
 
-    
-
-    match my_products.get_mut(input_index-1) {
+    match my_products.get_mut(input_index - 1) {
         Some(product) => {
-            my_products.remove(input_index-1);
-
-        },
+            my_products.remove(input_index - 1);
+        }
         None => {
             return Err("You don't have any product in your cart".to_string());
         }
@@ -1489,18 +1390,16 @@ fn delete_item_from_my_cart(account: &Account, cart_path: &str, product_path: &s
     cart_db[user_cart_index].products = my_products;
 
     match save_file(cart_path, &cart_db) {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(err) => {
             return Err(err);
         }
     }
 
-
     Ok(())
-    
 }
 
-fn clear_my_cart(account: &Account,  cart_path: &str) -> Result<(), String>{
+fn clear_my_cart(account: &Account, cart_path: &str) -> Result<(), String> {
     let mut cart_db: Vec<Cart> = match load_database(cart_path) {
         Ok(cart) => cart,
         Err(err) => {
@@ -1508,11 +1407,12 @@ fn clear_my_cart(account: &Account,  cart_path: &str) -> Result<(), String>{
         }
     };
 
-    let index = match cart_db.iter().position(|cart| cart.user_id == account.user.id) {
+    let index = match cart_db
+        .iter()
+        .position(|cart| cart.user_id == account.user.id)
+    {
         Some(index) => index,
-        None => {
-            return Err("Your Cart is Empty!".to_string())
-        }
+        None => return Err("Your Cart is Empty!".to_string()),
     };
 
     cart_db.remove(index);
@@ -1525,7 +1425,6 @@ fn clear_my_cart(account: &Account,  cart_path: &str) -> Result<(), String>{
     };
 
     Ok(())
-    
 }
 
 fn view_all_order(path: &str) -> Result<(), String> {
@@ -1533,7 +1432,6 @@ fn view_all_order(path: &str) -> Result<(), String> {
         Ok(data) => data,
         Err(err) => {
             return Err(err);
-
         }
     };
 
@@ -1554,10 +1452,11 @@ fn view_all_order(path: &str) -> Result<(), String> {
                 continue;
             };
 
-            println!("Order No:  {}", index+1);
+            println!("Order No:  {}", index + 1);
             println!("Order ID:          {}", order.order_id);
             println!("Amount:       ₦{:.2}", order.grand_total);
-            println!("Order Status:       {:?}", 
+            println!(
+                "Order Status:       {:?}",
                 match order.status {
                     OrderStatus::Cancelled => String::from("Cancelled"),
                     OrderStatus::Delivered => String::from("Delivered"),
@@ -1566,24 +1465,18 @@ fn view_all_order(path: &str) -> Result<(), String> {
                     OrderStatus::Shipped => String::from("Shipped"),
                 }
             );
-            println!(
-                "User FullName: {}",
-                account.user.name.trim()
-            );
-            println!(
-                "User Email: {}",
-                account.user.email.trim()
-            );
+            println!("User FullName: {}", account.user.name.trim());
+            println!("User Email: {}", account.user.email.trim());
             println!("==================================");
         }
 
         Ok(())
     } else {
-        return Err("There is no Available Order".to_string())
+        return Err("There is no Available Order".to_string());
     }
 }
 
-fn update_order_status(path: &str, index: usize) -> Result<(), String>{
+fn update_order_status(path: &str, index: usize) -> Result<(), String> {
     let mut order_db: Vec<Order> = match load_database(path) {
         Ok(order) => order,
         Err(err) => {
@@ -1632,11 +1525,13 @@ fn view_my_orders(path: &str, account: &Account) -> Result<(), String> {
     println!("==================================");
     println!("       MY AVAIALABLE ORDERS ");
     println!("==================================");
-    
-    let is_available = order_db.iter().any(|order| order.user_id == account.user.id);
 
-    if is_available{
-        for (index, order) in order_db.iter().enumerate(){
+    let is_available = order_db
+        .iter()
+        .any(|order| order.user_id == account.user.id);
+
+    if is_available {
+        for (index, order) in order_db.iter().enumerate() {
             if order.user_id == account.user.id {
                 order_output(index, order);
             }
@@ -1646,7 +1541,7 @@ fn view_my_orders(path: &str, account: &Account) -> Result<(), String> {
     let input = user_input("Select an Order to Check Status:");
 
     match view_my_single_order(&input, path) {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(err) => {
             return Err("Order not found!".to_string());
         }
@@ -1658,9 +1553,7 @@ fn view_my_orders(path: &str, account: &Account) -> Result<(), String> {
 fn view_my_single_order(input: &str, path: &str) -> Result<(), String> {
     let order_db: Vec<Order> = match load_database(path) {
         Ok(order) => order,
-        Err(err) => {
-            return Err(err)
-        }
+        Err(err) => return Err(err),
     };
 
     let index: usize = match input.trim().parse() {
@@ -1675,9 +1568,7 @@ fn view_my_single_order(input: &str, path: &str) -> Result<(), String> {
             order_output(index, order);
             Ok(())
         }
-        None => {
-            return Err("Order not found!".to_string())
-        }
+        None => return Err("Order not found!".to_string()),
     }
 }
 
@@ -1685,7 +1576,8 @@ fn order_output(index: usize, order: &Order) {
     println!("Order No:  {}", index);
     println!("Order ID:          {}", order.order_id);
     println!("Amount:       ₦{:.2}", order.grand_total);
-    println!("Order Status:       {:?}", 
+    println!(
+        "Order Status:       {:?}",
         match order.status {
             OrderStatus::Cancelled => String::from("Cancelled"),
             OrderStatus::Delivered => String::from("Delivered"),
@@ -1694,29 +1586,29 @@ fn order_output(index: usize, order: &Order) {
             OrderStatus::Shipped => String::from("Shipped"),
         }
     );
-    
+
     println!("==================================");
 }
 
-fn cart_output(index: usize, cart: &Cart) -> Result<(), String>{
+fn cart_output(index: usize, cart: &Cart) -> Result<(), String> {
     let product_path = "product.json";
     let acct_path = "account.json";
 
-    let acct_db:Vec<Account> = match load_database(acct_path) {
+    let acct_db: Vec<Account> = match load_database(acct_path) {
         Ok(acct) => acct,
         Err(err) => {
             return Err(err);
         }
     };
 
-    let prod_db:Vec<Product> = match load_database(product_path) {
+    let prod_db: Vec<Product> = match load_database(product_path) {
         Ok(acct) => acct,
         Err(err) => {
             return Err(err);
         }
     };
-    
-    let user_index = match acct_db.iter().position(|a| a.user.id == cart.user_id){
+
+    let user_index = match acct_db.iter().position(|a| a.user.id == cart.user_id) {
         Some(index) => index,
         None => {
             return Err("User's Cart is Empty!".to_string());
@@ -1798,16 +1690,12 @@ fn user_input(option: &str) -> String {
     input
 }
 
-fn load_database<T: serde::de::DeserializeOwned>(
-    path: &str
-) -> Result<Vec<T>, String> {
-
+fn load_database<T: serde::de::DeserializeOwned>(path: &str) -> Result<Vec<T>, String> {
     let file = match File::open(path) {
         Ok(file) => file,
 
         Err(err) => {
             return Ok(Vec::new());
-
         }
     };
 
@@ -1817,10 +1705,7 @@ fn load_database<T: serde::de::DeserializeOwned>(
         Ok(data) => data,
 
         Err(err) => {
-            return Err(format!(
-                "Cannot parse JSON file '{}': {}",
-                path, err
-            ));
+            return Err(format!("Cannot parse JSON file '{}': {}", path, err));
         }
     };
 
@@ -1935,7 +1820,6 @@ fn get_category(input: &str) -> Option<Category> {
     }
 }
 
-
 fn print_menu() {
     println!("Options:");
 
@@ -1943,7 +1827,6 @@ fn print_menu() {
         println!("{}. {}", index + 1, command.menu_item_name());
     }
 }
-
 
 fn product_output(product: &Product, serial_no: usize) {
     println!(
@@ -1964,17 +1847,15 @@ fn single_product_commands(
     product_path: &str,
     logged_in_account: &Option<Account>,
 ) -> Result<(), String> {
-
     let active_account = match verify_login(logged_in_account.clone()) {
-            Ok(account) => account,
-            Err(err) => {
-                return Err(err);
-            }
-        };
+        Ok(account) => account,
+        Err(err) => {
+            return Err(err);
+        }
+    };
 
     match input.trim() {
         "1" => {
-            
             if active_account.user.user_type == UserType::Admin {
                 let stock = &user_input("Enter the number of Stocks:");
                 match restock(stock, serial, product_path) {
@@ -1990,15 +1871,15 @@ fn single_product_commands(
         }
 
         "2" => {
-            // UPDATING A SINGLE PRODUCT 
+            // UPDATING A SINGLE PRODUCT
 
             if active_account.user.user_type == UserType::Admin {
                 match update_product(serial, product_path) {
                     Ok(_) => {
                         println!("Product Updated Successfully");
-                        return Ok(())
-                    },
-                    Err(err) => return Err(err)
+                        return Ok(());
+                    }
+                    Err(err) => return Err(err),
                 };
             } else {
                 Err("Only Admin has the Permission to Perform the action".to_string())
@@ -2006,7 +1887,6 @@ fn single_product_commands(
         }
 
         "3" => {
-            
             let mut cart_db: Vec<Cart> = match load_database(cart_path) {
                 Ok(cart) => cart,
                 Err(err) => {
@@ -2022,49 +1902,52 @@ fn single_product_commands(
                 }
             };
 
-            if let Some(prod) = cart_db.iter_mut().find(|cart_product| { cart_product.user_id == active_account.user.id }) {
+            if let Some(prod) = cart_db
+                .iter_mut()
+                .find(|cart_product| cart_product.user_id == active_account.user.id)
+            {
                 if quantity > product.stock {
-                    return Err("The requesting quantity is more than the Available stock".to_string())
+                    return Err(
+                        "The requesting quantity is more than the Available stock".to_string()
+                    );
                 } else {
-                    
-                    if let Some(new_prod) = prod.products.iter_mut().find(|p| p.product_id == product.id) {
+                    if let Some(new_prod) = prod
+                        .products
+                        .iter_mut()
+                        .find(|p| p.product_id == product.id)
+                    {
                         new_prod.quantity += quantity;
-                    }else {
-                        let mut cart_product:Vec<CartProduct> = Vec::new();
+                    } else {
+                        let mut cart_product: Vec<CartProduct> = Vec::new();
 
                         let new_product = CartProduct::new(product.id, quantity);
                         prod.products.push(new_product);
 
                         println!("Product Added to cart!")
                     }
-                    
+
                     match save_file(cart_path, &cart_db) {
-                    Ok(_) => return Ok(()),
-                    Err(err) => {
-                        return Err(err);
-                    }
-                };
-
+                        Ok(_) => return Ok(()),
+                        Err(err) => {
+                            return Err(err);
+                        }
+                    };
                 }
-
-                
             } else {
                 // println!("Not increased")
                 match add_to_cart(&active_account, quantity, &product, cart_path) {
                     Ok(_) => {
                         println!("Added to Cart Successfully");
-                        return Ok(())
-                    },
+                        return Ok(());
+                    }
                     Err(err) => {
                         return Err(err);
                     }
                 };
-                
             }
         }
 
         "4" => {
-            
             if active_account.user.user_type == UserType::Admin {
                 match delete_product(product_path, serial) {
                     Ok(_) => return Ok(()),
@@ -2072,16 +1955,14 @@ fn single_product_commands(
                         return Err(err);
                     }
                 };
-                
             } else {
-                return Err("Only Admin has the Permission to Perform the action".to_string())
+                return Err("Only Admin has the Permission to Perform the action".to_string());
             }
         }
 
         _ => return Err("Invalid Input for Product Actions".to_string()),
     }
 }
-
 
 fn generate_codes(initial: &str) -> Result<String, String> {
     const CODE_PATH: &str = "code_ids.json";
@@ -2093,7 +1974,6 @@ fn generate_codes(initial: &str) -> Result<String, String> {
         }
     };
 
-  
     loop {
         let number = rand::thread_rng().gen_range(1000..=9999);
 
@@ -2110,6 +1990,4 @@ fn generate_codes(initial: &str) -> Result<String, String> {
             }
         }
     }
-
-
 }
