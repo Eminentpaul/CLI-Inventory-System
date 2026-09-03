@@ -454,7 +454,15 @@ fn main() {
                     }
                 };
 
-                update_order_status(order_path, index);
+                match update_order_status(order_path, index) {
+                    Ok(_) => {
+                        println!("Order Updated Successfully")
+                    },
+                    Err(err) => {
+                        println!("{}",err);
+                        continue;
+                    }
+                }
             }
 
             "7" => {
@@ -1546,8 +1554,18 @@ fn view_all_order(path: &str) -> Result<(), String> {
                 continue;
             };
 
+            println!("Order No:  {}", index+1);
             println!("Order ID:          {}", order.order_id);
             println!("Amount:       ₦{:.2}", order.grand_total);
+            println!("Order Status:       {:?}", 
+                match order.status {
+                    OrderStatus::Cancelled => String::from("Cancelled"),
+                    OrderStatus::Delivered => String::from("Delivered"),
+                    OrderStatus::Paid => String::from("Paid"),
+                    OrderStatus::Processing => String::from("Processing"),
+                    OrderStatus::Shipped => String::from("Shipped"),
+                }
+            );
             println!(
                 "User FullName: {}",
                 account.user.name.trim()
@@ -1565,12 +1583,11 @@ fn view_all_order(path: &str) -> Result<(), String> {
     }
 }
 
-fn update_order_status(path: &str, index: usize) {
+fn update_order_status(path: &str, index: usize) -> Result<(), String>{
     let mut order_db: Vec<Order> = match load_database(path) {
         Ok(order) => order,
         Err(err) => {
-            println!("{}", err);
-            return;
+            return Err(err);
         }
     };
 
@@ -1580,8 +1597,7 @@ fn update_order_status(path: &str, index: usize) {
     let new_status = match get_order_status(&input) {
         Some(status) => status,
         None => {
-            println!("Invalid Status Selection");
-            return;
+            return Err("Invalid Status Selection".to_string());
         }
     };
 
@@ -1590,79 +1606,97 @@ fn update_order_status(path: &str, index: usize) {
             order.status = new_status;
 
             match save_file(path, &order_db) {
-                Ok(_done) => {
-                    println!("Order Updated Successfully");
+                Ok(_) => {
+                    return Ok(());
                 }
                 Err(err) => {
-                    println!("{}", err)
+                    return Err(err);
                 }
             }
         }
         None => {
-            println!("Invalid Selection of Order");
-            return;
+            return Err("Invalid Selection of Order".to_string());
         }
     }
 }
 
-fn view_my_orders(path: &str, account: &Account) {
+fn view_my_orders(path: &str, account: &Account) -> Result<(), String> {
     let order_db: Vec<Order> = match load_database(path) {
         Ok(order) => order,
         Err(err) => {
-            println!("{}", err);
-            return;
+            return Err(err);
         }
     };
 
-    for (index, order) in order_db.iter().enumerate() {
-        // if order.user.account_number == account.account_number {
-        //     order_output(index, order);
-        // }
+    println!();
+    println!("==================================");
+    println!("       MY AVAIALABLE ORDERS ");
+    println!("==================================");
+    
+    let is_available = order_db.iter().any(|order| order.user_id == account.user.id);
+
+    if is_available{
+        for (index, order) in order_db.iter().enumerate(){
+            if order.user_id == account.user.id {
+                order_output(index, order);
+            }
+        }
     }
 
     let input = user_input("Select an Order to Check Status:");
 
-    view_my_single_order(&input, path)
+    match view_my_single_order(&input, path) {
+        Ok(_) => {},
+        Err(err) => {
+            return Err("Order not found!".to_string());
+        }
+    }
+
+    Ok(())
 }
 
-fn view_my_single_order(input: &str, path: &str) {
+fn view_my_single_order(input: &str, path: &str) -> Result<(), String> {
     let order_db: Vec<Order> = match load_database(path) {
         Ok(order) => order,
         Err(err) => {
-            println!("{}", err);
-            return;
+            return Err(err)
         }
     };
 
     let index: usize = match input.trim().parse() {
         Ok(num) => num,
         Err(_err) => {
-            println!("Invalid Input Selection");
-            return;
+            return Err("Invalid Input Selection".to_string());
         }
     };
 
     match order_db.get(index - 1) {
         Some(order) => {
-            // order_output(index, order);
+            order_output(index, order);
+            Ok(())
         }
         None => {
-            println!("Order not found!")
+            return Err("Order not found!".to_string())
         }
     }
 }
 
-// fn order_output(index: usize, order: &Order) {
-//     println!(
-//         "----------------------\n{}. User Name: {}    -    User Email: {}\nOrders: {:#?}\nOrder Status: {:?}   -   Grand Total: N{:.2}\n",
-//         index + 1,
-//         order.user.user.name.trim().to_uppercase(),
-//         order.user.user.email.trim().to_lowercase(),
-//         order.carts,
-//         order.status,
-//         order.grand_total
-//     )
-// }
+fn order_output(index: usize, order: &Order) {
+    println!("Order No:  {}", index);
+    println!("Order ID:          {}", order.order_id);
+    println!("Amount:       ₦{:.2}", order.grand_total);
+    println!("Order Status:       {:?}", 
+        match order.status {
+            OrderStatus::Cancelled => String::from("Cancelled"),
+            OrderStatus::Delivered => String::from("Delivered"),
+            OrderStatus::Paid => String::from("Paid"),
+            OrderStatus::Processing => String::from("Processing"),
+            OrderStatus::Shipped => String::from("Shipped"),
+        }
+    );
+    
+    println!("==================================");
+}
 
 fn cart_output(index: usize, cart: &Cart) -> Result<(), String>{
     let product_path = "product.json";
